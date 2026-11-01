@@ -890,7 +890,7 @@ function setSync(s){
   el.textContent={ok:'Saved',saving:'Saving…',error:'Not saved',local:'Saved on this device'}[s]||s;
 }
 function persistProfile(now){
-  P.updated=Date.now();store.set('rl2.profile',P);
+  P.updated=Date.now();if(!store.set('rl2.profile',P))storageFull();
   clearTimeout(Cloud.timer);
   const push=()=>Cloud.set('profile',clone(P));
   if(now)push();else Cloud.timer=setTimeout(push,1500);
@@ -911,10 +911,11 @@ async function fetchText(meta){
   if(!Cloud.col||!meta.cloud)return null;
   let t='';
   for(let i=0;i<(meta.parts||1);i++){const s=await Cloud.col.doc('t_'+meta.id+'_'+i).get();if(!s.exists)return null;t+=s.data().text||''}
-  if(!store.set('rl2.text.'+meta.id,t)){mem[meta.id]=t;IDB.put('text:'+meta.id,t)}
+  mem[meta.id]=t;meta.idbText=true;IDB.put('text:'+meta.id,t);
   return t;
 }
-async function initCloud(){
+async function initCloud(){try{await initCloud0()}finally{setTimeout(recoverOrphans,600)}}
+async function initCloud0(){
   if(!window.claude||typeof claude.use!=='function'){setSync('local');return}
   try{
     const [user,db]=await Promise.all([claude.use('user'),claude.use('db')]);
@@ -973,7 +974,8 @@ const IDB={
   async tx(mode,fn){const db=await this.open();return new Promise((res,rej)=>{const t=db.transaction('files',mode);const rq=fn(t.objectStore('files'));t.oncomplete=()=>res(rq&&rq.result);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error)})},
   get(id){return this.tx('readonly',s=>s.get(id)).catch(()=>null)},
   put(id,v){return this.tx('readwrite',s=>s.put(v,id)).then(()=>true,()=>false)},
-  del(id){return this.tx('readwrite',s=>s.delete(id)).catch(()=>{})}
+  del(id){return this.tx('readwrite',s=>s.delete(id)).catch(()=>{})},
+  async all(){const db=await this.open();return new Promise((res,rej)=>{const out=[];const t=db.transaction('files','readonly');const rq=t.objectStore('files').openCursor();rq.onsuccess=()=>{const c=rq.result;if(c){out.push([c.key,c.value]);c.continue()}else res(out)};rq.onerror=()=>rej(rq.error)})}
 };
 function buildChunks(){chunks=[];let i=0;while(i<W.length){chunks.push(i);let c=0;while(i<W.length&&c<S.chunk){c++;i++;if(E[i-1]>=2)break}}if(!chunks.length)chunks=[0]}
 const chunkEnd=k=>k+1<chunks.length?chunks[k+1]:W.length;
@@ -1651,8 +1653,13 @@ const SVGNS='http://www.w3.org/2000/svg';
 const INK={11:'#1d4ed8',12:'#111827',13:'#15803d',14:'#dc2626'};
 const INK_ERASE=20,isInk=v=>v>=11&&v<=14,inkTool=v=>isInk(v)||v===INK_ERASE;
 let inkHosts={},inkCache={},inkDocId=null,inkLoaded=new Set(),inkHost=null,stylusSeen=false,inkUndo=[],inkTimers={};
+let inkLoadP=null;
 async function inkPage(p){
-  if(inkDocId!==doc.id){inkDocId=doc.id;inkCache=(await IDB.get('ink:'+doc.id))||{};inkLoaded=new Set();inkUndo=[]}
+  if(inkDocId!==doc.id){
+    inkDocId=doc.id;inkCache={};inkLoaded=new Set();inkUndo=[];const id=doc.id;
+    inkLoadP=IDB.get('ink:'+id).then(c=>{if(inkDocId!==id||!c)return;for(const k in c)if(c[k]&&(!inkCache[k]||!inkCache[k].strokes.length))inkCache[k]=c[k];for(const k in inkHosts)drawInk(+k)});
+  }
+  await inkLoadP;
   if(!inkCache[p])inkCache[p]={updated:0,strokes:[]};
   if(Cloud.col&&!inkLoaded.has(p)){
     inkLoaded.add(p);const id=doc.id;
@@ -1727,7 +1734,7 @@ function bindInk(svg,p){
     add(e);svg.onpointermove=add;
     svg.onpointerup=svg.onpointercancel=()=>{
       svg.onpointermove=null;svg.onpointerup=null;svg.onpointercancel=null;
-      if(st.pts.length>=2){inkCache[p].strokes.push(st);inkUndo.push({doc:doc.id,p,id:st.id});saveInk(p)}else path.remove();
+      if(st.pts.length>=2){if(!inkCache[p])inkCache[p]={updated:0,strokes:[]};inkCache[p].strokes.push(st);inkUndo.push({doc:doc.id,p,id:st.id});saveInk(p)}else path.remove();
     };
   };
 }
@@ -2435,8 +2442,8 @@ function addDoc(name,text,pdfPages,extra){
   const id='d'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
   const cf=P.curFolder;
   const meta=Object.assign({id,name:name||'Untitled reading',words:tokenize(text).words.length,added:Date.now(),folder:(cf&&cf!=='all'&&cf!=='none')?cf:null,pdfPages:pdfPages||null,pos:0},extra||{});
-  if(!store.set('rl2.text.'+id,text)){mem[id]=text;meta.idbText=true;IDB.put('text:'+id,text)}
-  P.docs.unshift(meta);persistProfile();uploadText(meta,text);
+  mem[id]=text;meta.idbText=true;IDB.put('text:'+id,text).then(ok=>{if(!ok)storageFull()});
+  P.docs.unshift(meta);persistProfile(true);uploadText(meta,text);
   return meta;
 }
 const REF=/^(\d+\.?\s*)?(references|bibliography|works cited|reference list|literature cited|notes and references)$/i;
@@ -2651,7 +2658,7 @@ async function handleFile(f,folderId){
       const N=r.pdfPages.length;
       if(r.words<Math.max(20,N*8)){
         const m=addDoc(name,'',null,{kind:'scan',pages:N,file:f.name,size:f.size,opts,folder:folderId||((P.curFolder&&P.curFolder!=='all'&&P.curFolder!=='none')?P.curFolder:null)});
-        await IDB.put(m.id,{pdf:r.bytes,scan:true});
+        await IDB.put(m.id,{pdf:r.bytes,scan:true,name:f.name});
         status(`Added ${m.name} as a scanned document (${N} pages). Read and mark it up in Study mode. To get searchable text, see Guide → Scanned documents.`);
         renderLibrary();return true;
       }
@@ -2665,7 +2672,7 @@ async function handleFile(f,folderId){
     const extra={opts,clean,kind,file:f.name,size:f.size,slides};
     if(folderId)extra.folder=folderId;
     const m=addDoc(name,text,pdfPages,extra);
-    if(r&&tokenize(text).words.length===r.words)await IDB.put(m.id,{pdf:r.bytes,geo:r.geo});
+    if(r&&tokenize(text).words.length===r.words)await IDB.put(m.id,{pdf:r.bytes,geo:r.geo,name:f.name});
     if(kind!=='pdf')await IDB.put('orig:'+m.id,{name:f.name,data:await f.arrayBuffer()});
     status(`Added ${m.name}: ${fmt(m.words)} words${pdfPages?` across ${pdfPages.length} pages`:slides?` across ${slides.length} slides`:''}.${clean?' '+clean[0].toUpperCase()+clean.slice(1)+'.':''}`);
     renderLibrary();return true;
@@ -2887,6 +2894,35 @@ $('#clearBtn').onclick=e=>{
   LOG.sessions=[];persistLog();b.dataset.armed='';b.textContent='Clear training history';renderProgress();toast('Training history cleared');
 };
 
+/* ================= storage safety ================= */
+let fullWarned=false;
+function storageFull(){if(fullWarned)return;fullWarned=true;toast('This browser is running out of storage space. Make a backup and remove materials you no longer need.')}
+async function migrateTexts(){
+  const keys=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('rl2.text.'))keys.push(k)}
+  for(const k of keys){const id=k.slice(9),v=localStorage.getItem(k);if(v==null)continue;if(await IDB.put('text:'+id,v)){localStorage.removeItem(k);const d=P.docs.find(x=>x.id===id);if(d)d.idbText=true}}
+  if(keys.length)persistProfile();
+}
+async function recoverOrphans(){
+  let all;try{all=await IDB.all()}catch(e){return}
+  const known=new Set(P.docs.map(d=>d.id)),done=new Set();let n=0;
+  for(const [k,v] of all){
+    if(typeof k!=='string'||!v)continue;
+    let id,file;
+    if(k.startsWith('orig:')&&v.data){id=k.slice(5);if(known.has(id))continue;file=new File([v.data],v.name||'Recovered file')}
+    else if(/^d[a-z0-9]{8,}$/.test(k)&&v.pdf){id=k;if(known.has(id))continue;const t=parseInt(k.slice(1,-3),36);file=new File([v.pdf],v.name||`Recovered PDF (${isNaN(t)?'date unknown':new Date(t).toLocaleDateString('en-GB')}).pdf`)}
+    else continue;
+    done.add(id);known.add(id);
+    status(`Recovering ${file.name}…`);
+    if(await handleFile(file)){n++;IDB.del(k);IDB.del('text:'+id)}
+  }
+  for(const [k,v] of all){
+    if(typeof k!=='string'||!k.startsWith('text:')||typeof v!=='string')continue;
+    const id=k.slice(5);if(known.has(id)||done.has(id)||tokenize(v).words.length<20)continue;
+    const t=parseInt(id.slice(1,-3),36);addDoc(`Recovered text (${isNaN(t)?'date unknown':new Date(t).toLocaleDateString('en-GB')})`,v,null,{kind:'text'});IDB.del(k);n++;
+  }
+  if(n){toast(`Recovered ${n} material${n>1?'s':''} that had not saved properly. Find them in Materials.`);if(view==='library')renderLibrary();if(view==='home')renderHome()}
+}
+
 /* ================= backup & restore ================= */
 IDB.all=async function(){const db=await this.open();return new Promise((res,rej)=>{const out=[];const t=db.transaction('files','readonly');const rq=t.objectStore('files').openCursor();rq.onsuccess=()=>{const c=rq.result;if(c){out.push([c.key,c.value]);c.continue()}else res(out)};rq.onerror=()=>rej(rq.error)})};
 function b64(buf){const u=new Uint8Array(buf);let s='';for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s)}
@@ -2941,10 +2977,12 @@ let tt=null;
 function toast(t){const el=$('#toast');el.textContent=t;el.hidden=false;clearTimeout(tt);tt=setTimeout(()=>el.hidden=true,3200)}
 document.addEventListener('visibilitychange',()=>{if(document.hidden)pause()});
 
+migrateTexts();
 syncUI();updPlay();$('#v-read').dataset.rm=S.rm;setPen(0);
 openDoc(allDocs().some(d=>d.id===P.last)?P.last:'sample',true).then(()=>renderHome());
 renderHome();
 setSync('local');
+setTimeout(recoverOrphans,800);
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
 if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(()=>{});
 })();
