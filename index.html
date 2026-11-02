@@ -553,6 +553,7 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
         <div class="libtools">
           <input id="libQ" class="txt" type="search" placeholder="Search titles" aria-label="Search titles">
           <div class="seg" id="libType" role="group" aria-label="File type"><button data-t="all">All</button><button data-t="pdf">PDF</button><button data-t="docx">Word</button><button data-t="pptx">Slides</button></div>
+          <button class="btn small" id="libDup">Remove duplicates</button>
         </div>
         <ul class="docs" id="docList"></ul>
       </div>
@@ -1089,8 +1090,11 @@ function baseMs(){
 }
 function dur(k){const b=baseMs(),s=chunks[k],e=chunkEnd(k);let t=0;for(let i=s;i<e;i++){t+=b;if(W[i].length>8)t+=b*0.3}const l=E[e-1];return t+b*S.pause*(l===3?2.5:l===2?1.6:l===1?0.6:0)}
 function step(){render();timer=setTimeout(()=>{sess.words+=chunkEnd(ci)-chunks[ci];if(ci>=chunks.length-1){pause();toast('End of reading. Take the check while it is fresh.');return}ci++;if(ci%25===0)savePos();step()},dur(ci))}
-function play(){if(!doc||playing||!W.length)return;if(ci>=chunks.length-1&&chunks.length>1){ci=0;sess={start:null,words:0,ms:0}}if(sess.start==null)sess.start=chunks[ci];playing=true;playT0=rampT0=performance.now();lockWake();updPlay();step()}
-function pause(){if(!playing)return;playing=false;clearTimeout(timer);sess.ms+=performance.now()-playT0;savePos();releaseWake();updPlay();render()}
+function fmtDur(ms){const t=Math.max(0,Math.round((ms||0)/1000)),h=Math.floor(t/3600),m=Math.floor(t%3600/60),x=t%60,p=n=>String(n).padStart(2,'0');return h?`${h}:${p(m)}:${p(x)}`:`${m}:${p(x)}`}
+let clockT=null;
+function updSessInfo(){const el=$('#sessInfo');if(!el)return;const ms=sess.ms+(playing?performance.now()-playT0:0);el.textContent=(sess.words||ms>=1000)?`${fmt(sess.words)} words · ${fmtDur(ms)} reading time${playing?'':' (paused)'}`:''}
+function play(){if(!doc||playing||!W.length)return;if(ci>=chunks.length-1&&chunks.length>1){ci=0;sess={start:null,words:0,ms:0}}if(sess.start==null)sess.start=chunks[ci];playing=true;playT0=rampT0=performance.now();lockWake();updPlay();clearInterval(clockT);clockT=setInterval(updSessInfo,1000);step()}
+function pause(){if(!playing)return;playing=false;clearTimeout(timer);clearInterval(clockT);sess.ms+=performance.now()-playT0;savePos();releaseWake();updPlay();render()}
 const toggle=()=>playing?pause():play();
 function seekWord(w){if(!W.length)return;w=Math.max(0,Math.min(W.length-1,w));if(playing){clearTimeout(timer);ci=chunkAt(w);rampT0=performance.now();step()}else{ci=chunkAt(w);render()}savePos()}
 function prevSentence(){let k=chunks[ci]-2;while(k>=0&&E[k]<2)k--;seekWord(k+1)}
@@ -1143,7 +1147,7 @@ function render(){
   if(doc.slides){txt+=` · slide ${search(doc.slides,s)+1} of ${doc.slides.length}`}
   else if(doc.pdfPages){const pp=search(doc.pdfPages,s);const pw=(pp+1<doc.pdfPages.length?doc.pdfPages[pp+1]:W.length)-doc.pdfPages[pp];txt+=` · PDF p. ${pp+1} of ${doc.pdfPages.length} (${fmt(pw)} words on this page)`}
   $('#where').textContent=txt;$('#scrub').value=s;
-  $('#sessInfo').textContent=sess.words?`${fmt(sess.words)} words this session`:'';
+  updSessInfo();
   renderLessonBar();
 }
 
@@ -2204,7 +2208,7 @@ function streak(){
   while(days.has(dayKey(d))){n++;d.setDate(d.getDate()-1)}
   return n;
 }
-function weekMinutes(){const cut=Date.now()-7*864e5;return [...LOG.sessions,...LOG.tests].filter(x=>x.date>=cut).reduce((s,x)=>s+(x.ms||0),0)/60000}
+function weekMs(){const cut=Date.now()-7*864e5;return [...LOG.sessions,...LOG.tests].filter(x=>x.date>=cut).reduce((s,x)=>s+(x.ms||0),0)}
 function recentERR(){const L=checked().slice(-3);return L.length?L.reduce((s,x)=>s+x.err,0)/L.length:null}
 function band(wpm){
   if(wpm<175)return 'Below the typical adult range';
@@ -2247,7 +2251,7 @@ function renderHome(){
       <div class="stat"><div class="k">Baseline</div><div class="v">${fmt(b.err)}</div><div class="s">effective wpm · ${dShort(b.date)}</div></div>
       <div class="stat hero"><div class="k">Now</div><div class="v">${r?fmt(r):'—'}</div><div class="s">${r?'avg of last 3 sessions '+delta(r,b.err):'complete a session'}</div></div>
       <div class="stat"><div class="k">Streak</div><div class="v">${streak()}</div><div class="s">days in a row</div></div>
-      <div class="stat"><div class="k">This week</div><div class="v">${fmt(weekMinutes())}</div><div class="s">minutes trained</div></div>
+      <div class="stat"><div class="k">This week</div><div class="v">${fmtDur(weekMs())}</div><div class="s">reading time trained</div></div>
     </div>
     <div class="home">
       <div class="stack">
@@ -2322,7 +2326,7 @@ function testResult(rec,first){
   if(fast)lines.push(['w','You finished in under 25 seconds, which usually means skimming. Consider retaking the test at your normal pace.']);
   if(!first)lines.push([rec.err>=b.err?'g':'w',`Effective rate ${fmt(rec.err)} wpm against your baseline of ${fmt(b.err)} (${delta(rec.err,b.err)}).`]);
   return `<div class="stats" style="margin-top:20px">
-    <div class="stat"><div class="k">Speed</div><div class="v">${fmt(rec.wpm)}</div><div class="s">wpm</div></div>
+    <div class="stat"><div class="k">Speed</div><div class="v">${fmt(rec.wpm)}</div><div class="s">wpm · read in ${fmtDur(rec.ms)}</div></div>
     <div class="stat"><div class="k">Comprehension</div><div class="v">${Math.round(rec.acc*100)}%</div></div>
     <div class="stat hero"><div class="k">Effective rate</div><div class="v">${fmt(rec.err)}</div><div class="s">wpm</div></div></div>
     <ul class="report">${lines.map(l=>`<li class="${l[0]}"><span>${l[1]}</span></li>`).join('')}</ul>
@@ -2390,6 +2394,7 @@ function renderLibrary(){
 }
 $('#folderList').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;P.curFolder=b.dataset.f;persistProfile();renderLibrary()});
 $('#libQ').addEventListener('input',e=>{libQ=e.target.value;renderLibrary()});
+$('#libDup').onclick=()=>siftDuplicates(true);
 $('#libType').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;libType=b.dataset.t;renderLibrary()});
 function ensureFolder(name){let f=P.folders.find(x=>x.name.toLowerCase()===name.toLowerCase());if(!f){f={id:'f'+Date.now().toString(36)+Math.random().toString(36).slice(2,4),name};P.folders.push(f)}return f.id}
 $('#addFolder').onclick=()=>{
@@ -2427,13 +2432,7 @@ $('#docList').addEventListener('click',async e=>{
   else if(act==='dl'){const d=P.docs.find(x=>x.id===id);if(d)downloadOriginal(d)}
   else if(act==='del'){
     if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Confirm remove';setTimeout(()=>{if(b.isConnected){b.dataset.armed='';b.textContent='Remove'}},4000);return}
-    const d=P.docs.find(x=>x.id===id);
-    if(d&&d.cloud)for(let i=0;i<(d.parts||1);i++)Cloud.del('t_'+id+'_'+i);
-    Cloud.del('h_'+id);Cloud.del('n_'+id);
-    P.docs=P.docs.filter(x=>x.id!==id);
-    ['rl2.text.','rl2.hl.','rl2.note.','rl2.noteT.'].forEach(k=>store.del(k+id));delete mem[id];
-    IDB.del(id);IDB.del('text:'+id);IDB.del('orig:'+id);IDB.del('tx:'+id);Cloud.del('x_'+id);IDB.del('ink:'+id);if(d&&d.inkPages)d.inkPages.forEach(pg=>Cloud.del(`k_${id}_${pg}`));
-    if(doc&&doc.id===id)await openDoc('sample',true);
+    await removeDoc(id);
     libOpen=null;persistProfile();renderLibrary();toast('Removed from your materials');
   }
 });
@@ -2652,12 +2651,15 @@ async function handleFile(f,folderId){
   const opts=Object.assign({},P.importOpts);
   status(`Reading ${f.name}…`);
   try{
+    const fh=await sha(await f.arrayBuffer());
+    const dupF=fh&&P.docs.find(d=>d.hash===fh);
+    if(dupF){status(`“${f.name}” is already in your materials as “${dupF.name}” (${folderName(dupF.folder||'none')}). Not added again.`);return 'dup'}
     let text='',pdfPages=null,slides=null,rep=null,r=null,kind='text',clean=null;
     if(ext==='pdf'){
       r=await readPdf(f,opts);
       const N=r.pdfPages.length;
       if(r.words<Math.max(20,N*8)){
-        const m=addDoc(name,'',null,{kind:'scan',pages:N,file:f.name,size:f.size,opts,folder:folderId||((P.curFolder&&P.curFolder!=='all'&&P.curFolder!=='none')?P.curFolder:null)});
+        const m=addDoc(name,'',null,{kind:'scan',pages:N,file:f.name,size:f.size,hash:fh,opts,folder:folderId||((P.curFolder&&P.curFolder!=='all'&&P.curFolder!=='none')?P.curFolder:null)});
         await IDB.put(m.id,{pdf:r.bytes,scan:true,name:f.name});
         status(`Added ${m.name} as a scanned document (${N} pages). Read and mark it up in Study mode. To get searchable text, see Guide → Scanned documents.`);
         renderLibrary();return true;
@@ -2669,7 +2671,9 @@ async function handleFile(f,folderId){
     else if(ext==='doc'||ext==='ppt')throw new Error(`Old .${ext} files cannot be read. Open it and save as .${ext}x or PDF, then add it again.`);
     else text=(await f.text()).replace(/^#{1,6}\s+/gm,'## ');
     if(tokenize(text).words.length<(kind==='pptx'?3:20))throw new Error(ext==='pdf'?`No readable text in ${f.name}. It is probably scanned pages. Run it through OCR first, or paste the text instead.`:`No readable text found in ${f.name}.`);
-    const extra={opts,clean,kind,file:f.name,size:f.size,slides};
+    const th=await sha(text),dupT=th&&P.docs.find(d=>d.thash===th);
+    if(dupT){if(fh&&!dupT.hash){dupT.hash=fh;persistProfile()}status(`“${f.name}” has the same content as “${dupT.name}” (${folderName(dupT.folder||'none')}), which is already in your materials. Not added again.`);return 'dup'}
+    const extra={opts,clean,kind,file:f.name,size:f.size,slides,hash:fh,thash:th};
     if(folderId)extra.folder=folderId;
     const m=addDoc(name,text,pdfPages,extra);
     if(r&&tokenize(text).words.length===r.words)await IDB.put(m.id,{pdf:r.bytes,geo:r.geo,name:f.name});
@@ -2687,9 +2691,10 @@ $('#dirIn').addEventListener('change',async e=>{
   const have=new Set(P.docs.filter(d=>d.folder===fid).map(d=>(d.file||'')+'|'+(d.size||'')));
   const todo=files.filter(f=>!have.has(f.name+'|'+f.size));
   if(!todo.length){status(`Everything in “${top}” is already here.`);renderLibrary();return}
-  let ok=0;
-  for(let i=0;i<todo.length;i++){status(`Importing ${i+1} of ${todo.length}: ${todo[i].name}`);if(await handleFile(todo[i],fid))ok++}
-  status(`Imported ${ok} of ${todo.length} new file${todo.length>1?'s':''} into “${top}”${files.length>todo.length?`; ${files.length-todo.length} already here`:''}.${ok<todo.length?' Some files could not be read.':''}`);
+  let ok=0,dups=0;
+  for(let i=0;i<todo.length;i++){status(`Importing ${i+1} of ${todo.length}: ${todo[i].name}`);const r=await handleFile(todo[i],fid);if(r==='dup')dups++;else if(r)ok++}
+  const fail=todo.length-ok-dups,already=files.length-todo.length+dups;
+  status(`Imported ${ok} new file${ok===1?'':'s'} into “${top}”${already?`; ${already} already in your materials`:''}.${fail?` ${fail} could not be read.`:''}`);
   renderLibrary();
 });
 $('#file').addEventListener('change',async e=>{for(const f of e.target.files)await handleFile(f);e.target.value=''});
@@ -2697,7 +2702,7 @@ const drop=$('#drop');
 ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over')}));
 ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over')}));
 drop.addEventListener('drop',async e=>{for(const f of e.dataTransfer.files)await handleFile(f)});
-$('#pasteAdd').onclick=()=>{const text=$('#pasteText').value;if(tokenize(text).words.length<20){status('Paste at least 20 words.');return}const m=addDoc($('#pasteName').value.trim()||'Pasted text',text,null);$('#pasteText').value='';$('#pasteName').value='';status(`Added ${m.name}.`);renderLibrary()};
+$('#pasteAdd').onclick=async()=>{const text=$('#pasteText').value;if(tokenize(text).words.length<20){status('Paste at least 20 words.');return}const th=await sha(text),dup=th&&P.docs.find(d=>d.thash===th);if(dup){status(`This text is already in your materials as “${dup.name}”.`);return}const m=addDoc($('#pasteName').value.trim()||'Pasted text',text,null,{thash:th});$('#pasteText').value='';$('#pasteName').value='';status(`Added ${m.name}.`);renderLibrary()};
 
 /* ================= comprehension check ================= */
 const STOP=new Set('about above after again against because before being below between could during every further having other should their there these those through under until where which while would itself themselves another without within however therefore'.split(' '));
@@ -2825,7 +2830,7 @@ function scoreQuiz(){
     <div class="stat"><div class="k">Actual speed</div><div class="v">${fmt(actual)}</div><div class="s">wpm (set ${rec.set})</div></div>
     <div class="stat"><div class="k">Comprehension</div><div class="v">${right}/${quiz.length}</div><div class="s">${Math.round(acc*100)}%</div></div>
     <div class="stat hero"><div class="k">Effective rate</div><div class="v">${fmt(rec.err)}</div><div class="s">wpm ${P.baseline?delta(rec.err,P.baseline.err)+' vs baseline':''}</div></div>
-    <div class="stat"><div class="k">Session</div><div class="v">${fmt(rec.ms/60000)}</div><div class="s">minutes · ${fmt(rec.words)} words</div></div></div>
+    <div class="stat"><div class="k">Reading time</div><div class="v">${fmtDur(rec.ms)}</div><div class="s">min:sec, pauses excluded · ${fmt(rec.words)} words</div></div></div>
     <p class="eyebrow">Report card</p>
     <ul class="report">${lines.map(l=>`<li class="${l[0]}"><span>${l[1]}</span></li>`).join('')}</ul>
     <div class="row-gap" style="margin-top:14px">${next.btn}<button class="btn" id="contRead">Keep reading</button><button class="btn" id="toHome">Course</button></div>`;
@@ -2865,7 +2870,7 @@ function renderProgress(){
     <div class="stat"><div class="k">Baseline</div><div class="v">${b?fmt(b.err):'—'}</div><div class="s">${b?`effective wpm · ${fmt(b.wpm)} wpm at ${Math.round(b.acc*100)}%`:'take the placement test'}</div></div>
     <div class="stat hero"><div class="k">Current</div><div class="v">${r?fmt(r):'—'}</div><div class="s">${r&&b?delta(r,b.err)+' vs baseline':'last 3 sessions'}</div></div>
     <div class="stat"><div class="k">Level</div><div class="v">${b?P.level+' / 10':'—'}</div><div class="s">${b?esc(LEVELS[P.level-1].name):''}</div></div>
-    <div class="stat"><div class="k">Training time</div><div class="v">${fmt(LOG.sessions.reduce((s,x)=>s+(x.ms||0),0)/60000)}</div><div class="s">minutes · ${fmt(C.reduce((s,x)=>s+x.words,0))} words</div></div>`;
+    <div class="stat"><div class="k">Training time</div><div class="v">${fmtDur(LOG.sessions.reduce((s,x)=>s+(x.ms||0),0))}</div><div class="s">reading time · ${fmt(C.reduce((s,x)=>s+x.words,0))} words</div></div>`;
   const L=C.slice(-30);
   if(L.length<2)$('#chart').innerHTML='<p class="empty">Your chart appears after two checked sessions.</p>';
   else{
@@ -2884,15 +2889,71 @@ function renderProgress(){
     const li=L.length-1;g+=`<circle cx="${X(li)}" cy="${Y(L[li].err)}" r="4.5" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>`;
     $('#chart').innerHTML=`<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Effective rate and actual speed over your last ${L.length} sessions">${g}</svg>`;
   }
-  $('#testsTbl').innerHTML=LOG.tests.length?`<h3>Placement tests</h3><table><thead><tr><th>Date</th><th>Passage</th><th class="n">Speed</th><th class="n">Score</th><th class="n">Effective</th></tr></thead><tbody>${LOG.tests.slice().reverse().map(x=>`<tr><td>${dShort(x.date)}</td><td>${esc(x.passage)}</td><td class="n">${fmt(x.wpm)}</td><td class="n">${pill(x.acc)}</td><td class="n">${fmt(x.err)}</td></tr>`).join('')}</tbody></table>`:'<p class="empty" style="padding:14px">No tests yet.</p>';
+  $('#testsTbl').innerHTML=LOG.tests.length?`<h3>Placement tests</h3><table><thead><tr><th>Date</th><th>Passage</th><th class="n">Time</th><th class="n">Speed</th><th class="n">Score</th><th class="n">Effective</th></tr></thead><tbody>${LOG.tests.slice().reverse().map(x=>`<tr><td>${dShort(x.date)}</td><td>${esc(x.passage)}</td><td class="n">${fmtDur(x.ms)}</td><td class="n">${fmt(x.wpm)}</td><td class="n">${pill(x.acc)}</td><td class="n">${fmt(x.err)}</td></tr>`).join('')}</tbody></table>`:'<p class="empty" style="padding:14px">No tests yet.</p>';
   $('#clearRow').hidden=!LOG.sessions.length;
-  $('#table').innerHTML=C.length?`<h3>Training sessions</h3><table><thead><tr><th>Date</th><th>Reading</th><th class="n">Level</th><th class="n">Set</th><th class="n">Actual</th><th class="n">Chunk</th><th class="n">Score</th><th class="n">Effective</th></tr></thead><tbody>${C.slice().reverse().map(x=>`<tr><td>${dShort(x.date)}</td><td style="max-width:22ch;overflow:hidden;text-overflow:ellipsis">${esc(x.doc)}</td><td class="n">${x.level?x.level+(x.passed?' ✓':''):'–'}</td><td class="n">${x.set}</td><td class="n">${fmt(x.wpm)}</td><td class="n">${x.chunk}</td><td class="n">${pill(x.acc)}</td><td class="n">${fmt(x.err)}</td></tr>`).join('')}</tbody></table>`:'<p class="empty" style="padding:14px">No training sessions yet.</p>';
+  $('#table').innerHTML=C.length?`<h3>Training sessions</h3><table><thead><tr><th>Date</th><th>Reading</th><th class="n">Level</th><th class="n">Time</th><th class="n">Set</th><th class="n">Actual</th><th class="n">Chunk</th><th class="n">Score</th><th class="n">Effective</th></tr></thead><tbody>${C.slice().reverse().map(x=>`<tr><td>${dShort(x.date)}</td><td style="max-width:22ch;overflow:hidden;text-overflow:ellipsis">${esc(x.doc)}</td><td class="n">${x.level?x.level+(x.passed?' ✓':''):'–'}</td><td class="n">${fmtDur(x.ms)}</td><td class="n">${x.set}</td><td class="n">${fmt(x.wpm)}</td><td class="n">${x.chunk}</td><td class="n">${pill(x.acc)}</td><td class="n">${fmt(x.err)}</td></tr>`).join('')}</tbody></table>`:'<p class="empty" style="padding:14px">No training sessions yet.</p>';
 }
 $('#clearBtn').onclick=e=>{
   const b=e.currentTarget;
   if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Confirm: delete training sessions (tests kept)';setTimeout(()=>{b.dataset.armed='';b.textContent='Clear training history'},4000);return}
   LOG.sessions=[];persistLog();b.dataset.armed='';b.textContent='Clear training history';renderProgress();toast('Training history cleared');
 };
+
+/* ================= duplicates ================= */
+async function sha(data){
+  try{if(!crypto||!crypto.subtle)return null;const buf=typeof data==='string'?new TextEncoder().encode(data):data;const h=await crypto.subtle.digest('SHA-256',buf);return [...new Uint8Array(h)].slice(0,16).map(b=>b.toString(16).padStart(2,'0')).join('')}catch(e){return null}
+}
+async function removeDoc(id){
+  const d=P.docs.find(x=>x.id===id);
+  if(d&&d.cloud)for(let i=0;i<(d.parts||1);i++)Cloud.del('t_'+id+'_'+i);
+  Cloud.del('h_'+id);Cloud.del('n_'+id);
+  P.docs=P.docs.filter(x=>x.id!==id);
+  ['rl2.text.','rl2.hl.','rl2.note.','rl2.noteT.'].forEach(k=>store.del(k+id));delete mem[id];
+  IDB.del(id);IDB.del('text:'+id);IDB.del('orig:'+id);IDB.del('tx:'+id);Cloud.del('x_'+id);IDB.del('ink:'+id);if(d&&d.inkPages)d.inkPages.forEach(pg=>Cloud.del(`k_${id}_${pg}`));
+  if(doc&&doc.id===id)await openDoc('sample',true);
+}
+function workOn(d){
+  const hl=(store.get('rl2.hl.'+d.id,null)||{list:[]}).list.length;
+  const note=(store.get('rl2.note.'+d.id,'')||'').trim().length;
+  const ink=(d.inkPages||[]).length;
+  return {hl,note,ink,any:hl>0||note>0||ink>0,score:hl*10+(note?20:0)+ink*10+(d.pos>0?3:0)+(d.lastOpened?1:0)};
+}
+let siftRunning=false;
+async function siftDuplicates(manual){
+  if(siftRunning)return;siftRunning=true;
+  try{
+    let changed=false;
+    for(const d of P.docs){
+      if(!d.hash){let bytes=null;if(d.kind==='scan'||d.pdfPages){const r=await IDB.get(d.id);if(r&&r.pdf)bytes=r.pdf}if(!bytes){const r=await IDB.get('orig:'+d.id);if(r&&r.data)bytes=r.data}if(bytes){const h=await sha(bytes);if(h){d.hash=h;changed=true}}}
+      if(!d.thash&&d.kind!=='scan'){const t=await getText(d);if(t){const h=await sha(t);if(h){d.thash=h;changed=true}}}
+    }
+    const parent={},find=x=>parent[x]===x?x:(parent[x]=find(parent[x]));
+    P.docs.forEach(d=>parent[d.id]=d.id);
+    for(const key of ['hash','thash']){const first={};for(const d of P.docs){const k=d[key];if(!k)continue;if(first[k])parent[find(d.id)]=find(first[k]);else first[k]=d.id}}
+    const groups={};for(const d of P.docs){const r=find(d.id);(groups[r]=groups[r]||[]).push(d)}
+    let removed=0,kept=0;
+    for(const g of Object.values(groups)){
+      if(g.length<2)continue;
+      const scored=g.map(d=>({d,w:workOn(d)}));
+      scored.sort((a,b)=>(b.w.score-a.w.score)||((/^Recovered /.test(a.d.name)?1:0)-(/^Recovered /.test(b.d.name)?1:0))||((a.d.added||0)-(b.d.added||0)));
+      const keep=scored[0].d;
+      for(const {d,w} of scored.slice(1)){
+        if(w.any){kept++;continue}
+        if(/^Recovered /.test(keep.name)&&!/^Recovered /.test(d.name))keep.name=d.name;
+        if(!keep.folder&&d.folder)keep.folder=d.folder;
+        if(!keep.due&&d.due)keep.due=d.due;
+        if((d.pos||0)>(keep.pos||0)&&!keep.pos)keep.pos=d.pos;
+        await removeDoc(d.id);removed++;changed=true;
+      }
+    }
+    if(changed)persistProfile(true);
+    if(removed||kept||manual){
+      const msg=removed?`Removed ${removed} duplicate cop${removed===1?'y':'ies'}.`:'No duplicates to remove.';
+      toast(msg+(kept?` ${kept} duplicate${kept===1?' has':'s have'} its own highlights, notes or ink, so ${kept===1?'it was':'they were'} kept; remove ${kept===1?'it':'them'} yourself if not needed.`:''));
+    }
+    if(view==='library')renderLibrary();if(view==='home')renderHome();
+  }finally{siftRunning=false}
+}
 
 /* ================= storage safety ================= */
 let fullWarned=false;
@@ -2913,14 +2974,16 @@ async function recoverOrphans(){
     else continue;
     done.add(id);known.add(id);
     status(`Recovering ${file.name}…`);
-    if(await handleFile(file)){n++;IDB.del(k);IDB.del('text:'+id)}
+    const res=await handleFile(file);if(res===true)n++;if(res){IDB.del(k);IDB.del('text:'+id)}
   }
   for(const [k,v] of all){
     if(typeof k!=='string'||!k.startsWith('text:')||typeof v!=='string')continue;
     const id=k.slice(5);if(known.has(id)||done.has(id)||tokenize(v).words.length<20)continue;
-    const t=parseInt(id.slice(1,-3),36);addDoc(`Recovered text (${isNaN(t)?'date unknown':new Date(t).toLocaleDateString('en-GB')})`,v,null,{kind:'text'});IDB.del(k);n++;
+    const th=await sha(v);if(th&&P.docs.some(d=>d.thash===th)){IDB.del(k);continue}
+    const t=parseInt(id.slice(1,-3),36);addDoc(`Recovered text (${isNaN(t)?'date unknown':new Date(t).toLocaleDateString('en-GB')})`,v,null,{kind:'text',thash:th});IDB.del(k);n++;
   }
   if(n){toast(`Recovered ${n} material${n>1?'s':''} that had not saved properly. Find them in Materials.`);if(view==='library')renderLibrary();if(view==='home')renderHome()}
+  setTimeout(()=>siftDuplicates(false),n?3500:200);
 }
 
 /* ================= backup & restore ================= */
