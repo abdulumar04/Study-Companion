@@ -283,6 +283,13 @@ svg.ink{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;ove
 .hllist{list-style:none;margin:12px 0 10px;padding:0;display:flex;flex-direction:column;max-height:360px;overflow:auto}
 .hllist li{display:grid;grid-template-columns:12px minmax(0,1fr) auto;gap:10px;padding:8px 0;border-top:1px solid var(--rule);align-items:start}
 .hllist li:first-child{border-top:0}
+.kpsrc{font-size:12px;color:var(--ink-3);margin:0 0 8px}
+.kpover{margin:0 0 10px;font-size:14px;line-height:1.55}
+.kplist{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;max-height:420px;overflow:auto;font-size:13.5px;line-height:1.5}
+.kplist .linkish{font-size:12px}
+.kpterms{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 0}
+.kpterms span{font-size:12px;padding:2px 8px;border-radius:99px;background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.study span.kpflash{background:color-mix(in srgb,var(--accent) 30%,transparent)!important;transition:background .4s}
 .hllist li>.sw{width:12px;height:12px;margin-top:5px;cursor:default}
 .hllist li:only-child{display:block}
 .hllist .meta{font:12px var(--mono);color:var(--ink-3)}
@@ -464,7 +471,7 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
           <div class="studynav">
             <button class="btn small" id="spPrev">‹ Previous</button>
             <span class="val" id="spLabel"></span>
-            <span class="row-gap"><button class="btn small" id="spOcr" hidden>Transcribe with Claude</button><button class="btn small" id="spView" hidden>Show printed page</button><button class="btn small" id="spMode" hidden>Page view</button><button class="btn small" id="spClear">Clear marks here</button><button class="btn small" id="spSmaller" aria-label="Smaller text">A−</button><button class="btn small" id="spBigger" aria-label="Larger text">A+</button></span>
+            <span class="row-gap"><button class="btn small" id="spOcr" hidden>Turn into text</button><button class="btn small" id="spView" hidden>Show printed page</button><button class="btn small" id="spMode" hidden>Page view</button><button class="btn small" id="spClear">Clear marks here</button><button class="btn small" id="spSmaller" aria-label="Smaller text">A−</button><button class="btn small" id="spBigger" aria-label="Larger text">A+</button></span>
             <button class="btn small" id="spNext">Next ›</button>
           </div>
         </div>
@@ -487,6 +494,12 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
       <div class="row-gap train-only" style="margin-top:14px"><button class="btn primary" id="toCheck">Finish session and check comprehension</button><span class="hint" id="sessInfo"></span></div>
     </div>
     <aside class="rail">
+      <div class="panel study-only" id="kpPanel">
+        <h2>Key points</h2>
+        <div id="kpBody"></div>
+        <div class="row-gap" style="margin-top:10px"><button class="btn primary small" id="kpGo">✦ Find key points</button><button class="btn small" id="kpListen" hidden>▶ Listen to them</button><button class="btn small" id="kpNote" hidden>Add to my notes</button><button class="btn small" id="kpCopy" hidden>Copy</button><button class="btn small" id="kpClaude">Copy for Claude</button><button class="btn small" id="kpPlain">Open for Copilot</button></div>
+        <p class="hint" id="kpClaudeHint" style="margin-top:8px">For a full written summary: <b>Copy for Claude</b> and paste into Claude, or <b>Open for Copilot</b> and ask Copilot in Edge to summarise the page. Your text goes to them only when you do.</p>
+      </div>
       <div class="panel study-only" id="ssPanel">
         <h2>Study session</h2>
         <p class="hint" style="margin-bottom:10px">Preview, listen and read along, recall from memory, check your understanding, then review on a schedule.</p>
@@ -651,6 +664,7 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
       <button data-g="g-add">Adding materials</button>
       <button data-g="g-study">Study mode</button>
       <button data-g="g-session">Study session</button>
+      <button data-g="g-kp">Key points</button>
       <button data-g="g-listen">Listen (read aloud)</button>
       <button data-g="g-pens">Pens and highlighters</button>
       <button data-g="g-scan">Scanned documents</button>
@@ -726,6 +740,15 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
       </ol>
       <p class="hint">Why this works: previewing gives your mind a structure, recalling from memory and spacing reviews over days are the two habits with the strongest evidence for lasting learning.</p>
     </section>
+    <section id="g-kp">
+      <h3>Key points</h3>
+      <ul>
+        <li>In Study mode, press <b>✦ Find key points</b> in the panel on the right. You get the main points of the reading, the key terms, and a <b>Show in text</b> link that takes you to each point on the page.</li>
+        <li><b>▶ Listen to them</b> reads the points aloud; <b>Add to my notes</b> puts them in My notes; <b>Copy</b> copies them.</li>
+        <li><b>Two ways it works:</b> if your browser has built-in AI on this device (recent Chrome on a capable computer; Microsoft Edge is adding it), you get a written summary and key points. Otherwise the app picks the most important sentences from the reading itself, word for word. Either way nothing leaves your device and it costs nothing.</li>
+        <li>Best on proper text PDFs and Word files. On scans with damaged text, the points are only as good as the text.</li>
+      </ul>
+    </section>
     <section id="g-listen">
       <h3>Listen (read aloud)</h3>
       <ul>
@@ -759,7 +782,8 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
       <h3>Scanned documents</h3>
       <ul>
         <li>A PDF made of photographed or scanned pages is added as a <b>Scan</b>. You can read it, highlight areas by dragging boxes, write on it with the ink pens and attach notes.</li>
-        <li><b>To get searchable text from a scan,</b> run it through a free text-recognition tool first, then add the result: in Google Drive, right-click the PDF and choose <b>Open with → Google Docs</b>, then download it as Word; or use the Adobe Scan or Microsoft Lens phone apps. The new file can be highlighted, searched and used for speed training.</li>
+        <li><b>Turn a scan into text:</b> open it in Study mode and press <b>Turn into text</b> under the page. Choose the pages and press <b>Turn into text</b>; the app reads each page on your device (a few seconds a page, free, offline after the first use). Then press <b>Create a text material from the transcription</b> to get a version you can listen to, train on and search.</li>
+        <li><b>Scanned journals with damaged text</b> (common on older JSTOR copies): when you add one, lines whose hidden text is cut short are read again from the page image automatically, so the missing words come back. This happens once, while the file is added.</li>
       </ul>
     </section>
 
@@ -1262,7 +1286,7 @@ async function openDoc(id,quiet){
   $('#gotoBox').hidden=!units;
   if(units){$('#gotoPage').max=units.length;$('#gotoLab').textContent=meta.slides?'Slide':'Page'}
   if(meta.kind==='pptx'&&S.rm!=='study'){S.rm='study'}
-  loadHL(meta.id);loadNote(meta.id);
+  loadHL(meta.id);loadNote(meta.id);loadKP();
   setRm(S.rm);
 }
 function playedMs(){return sess.ms+(playing?performance.now()-playT0:0)}
@@ -1682,7 +1706,7 @@ async function openScan(meta){
   P.last=meta.id;meta.lastOpened=Date.now();persistProfile();
   sess={start:null,words:0,ms:0};
   $('#gotoBox').hidden=false;$('#gotoPage').max=meta.pages;$('#gotoLab').textContent='Page';
-  loadHL(meta.id);loadNote(meta.id);await loadTX(meta.id);
+  loadHL(meta.id);loadNote(meta.id);await loadTX(meta.id);KP=null;renderKP();
   setRm('study');
 }
 async function loadTX(id){
@@ -1698,7 +1722,7 @@ async function renderScan(){
   const st=$('#study'),n=doc.pages||1;
   $('#spLabel').textContent=`Page ${scanPage+1} of ${n}`;
   $('#spPrev').disabled=scanPage===0;$('#spNext').disabled=scanPage>=n-1;
-  $('#spView').hidden=true;$('#spOcr').hidden=true;
+  $('#spView').hidden=true;$('#spOcr').hidden=false;
   $('#where').textContent=`${doc.name} · scanned PDF · ${n} pages${Object.keys(TX).length?` · ${Object.keys(TX).length} transcribed`:''}`;
   renderScanExtra();
   $('#spMode').hidden=!fileRec;$('#spMode').textContent=S.pdfScroll?'Page view':'Scroll view';
@@ -1781,16 +1805,16 @@ function scanStep(d){
   const top=$('#v-read').getBoundingClientRect().top+window.scrollY-10;if(window.scrollY>top)window.scrollTo(0,top);
 }
 function renderScanExtra(){
-  const box=$('#scanExtra');if(!doc||doc.kind!=='scan'||!Object.keys(TX).length){box.hidden=true;return}
+  const box=$('#scanExtra');if(!doc||doc.kind!=='scan'||(!Object.keys(TX).length&&box.dataset.ocr!=='1')){box.hidden=true;return}
   box.hidden=false;
   const t=TX[scanPage],done=Object.keys(TX).filter(k=>TX[k]&&TX[k].trim()).length,n=doc.pages||1;
   const open=box.dataset.ocr==='1';
   box.innerHTML=`${t?`<div class="txpage"><p class="eyebrow">Transcription of page ${scanPage+1}</p>${t.split(/\n\s*\n/).map(p=>p.startsWith('## ')?`<h3>${esc(p.slice(3))}</h3>`:`<p>${esc(p)}</p>`).join('')}</div>`:''}
     <div class="ocrbar">
       ${open?`<div class="ocrform">
-        <p class="hint">Claude reads each scanned page and types out its text. It takes roughly 10 to 30 seconds a page and uses your Claude allowance, so transcribe the pages you need rather than a whole book.</p>
+        <p class="hint">The app reads each scanned page on this device and types out its text. It takes a few seconds a page. The first time, it downloads its reading engine (about 7 MB); after that it works offline.</p>
         <div class="row-gap"><label class="hint" for="ocrFrom">Pages</label><input id="ocrFrom" class="txt num" type="number" min="1" max="${n}" value="${scanPage+1}"><span class="hint">to</span><input id="ocrTo" class="txt num" type="number" min="1" max="${n}" value="${Math.min(n,scanPage+5)}">
-        <button class="btn small primary" id="ocrGo">Transcribe</button><button class="btn small" id="ocrStop" hidden>Stop</button></div>
+        <button class="btn small primary" id="ocrGo">Turn into text</button><button class="btn small" id="ocrStop" hidden>Stop</button></div>
         <p class="status" id="ocrStatus"></p></div>`:''}
       ${done?`<div class="row-gap"><span class="hint">${done} of ${n} pages transcribed.</span><button class="btn small" id="ocrMake">Create a text material from the transcription</button></div>`:''}
     </div>`;
@@ -1799,7 +1823,7 @@ function renderScanExtra(){
   const mk=$('#ocrMake');if(mk)mk.onclick=()=>{
     const keys=Object.keys(TX).map(Number).filter(k=>TX[k]&&TX[k].trim()).sort((a,b)=>a-b);
     const text=keys.map(k=>`## Page ${k+1}\n\n${TX[k].trim()}`).join('\n\n');
-    const m=addDoc(`${doc.name} (transcribed)`,text,null,{kind:'text',folder:doc.folder||null,clean:`transcribed ${keys.length} of ${n} scanned pages with Claude`});
+    const m=addDoc(`${doc.name} (transcribed)`,text,null,{kind:'text',folder:doc.folder||null,clean:`text recognised from ${keys.length} of ${n} scanned pages`});
     toast(`Created “${m.name}”. You can highlight, search and train on it.`);
   };
 }
@@ -1813,26 +1837,22 @@ async function pageImage(p){
 }
 async function runOcr(){
   const n=doc.pages||1,setOS=t=>{const e=$('#ocrStatus');if(e)e.textContent=t};
-  if(!aiSample){setOS('Transcription needs Claude. Sign in to use it.');return}
-  const lim=await aiSample.limits().catch(()=>null);
-  if(!lim||!lim.images){setOS('Sending page images to Claude is not available in this view.');return}
+  setOS('Getting the text reader ready…');try{await getTess()}catch(e){setOS('The text reader could not load. Connect to the internet once, then try again.');return}
   let a=Math.max(1,Math.min(n,+$('#ocrFrom').value||1)),b=Math.max(a,Math.min(n,+$('#ocrTo').value||a));
-  let note=b-a>29?' Limited to 30 pages per run.':'';if(note)b=a+29;
+  let note='';
   $('#ocrGo').disabled=true;$('#ocrStop').hidden=false;
   ocrAbort=new AbortController();const id=doc.id;let ok=0,msg='';
   for(let p=a-1;p<=b-1;p++){
     if(!doc||doc.id!==id||ocrAbort.signal.aborted)break;
     if(TX[p]){ok++;continue}
-    setOS(`Transcribing page ${p+1} (${p-a+2} of ${b-a+1})…${note}`);
+    setOS(`Reading page ${p+1} (${p-a+2} of ${b-a+1})…${note}`);
     try{
-      const img=await pageImage(p);
-      const r=await aiSample(`Transcribe all the text on this scanned page exactly as written, in reading order. Keep paragraph breaks as blank lines. Put "## " before headings. Leave out running headers, footers and page numbers. If the page has two columns, transcribe the left column first. Output only the transcription, with no commentary. If the page has no text, output EMPTY.`,{images:[img],modelTier:'default',signal:ocrAbort.signal});
-      const t=(r.text||'').trim();TX[p]=t==='EMPTY'?' ':t;saveTX();ok++;
-    }catch(e){
-      if(e&&e.code==='cancelled'){msg='Stopped. Pages done so far are saved.';break}
-      msg=e&&e.code==='rate_limited'?'Claude usage limit reached. Pages done so far are saved.':`Page ${p+1} could not be transcribed. Pages done so far are saved.`;
-      break;
-    }
+      const pdf=await ensurePdf(),pg=await pdf.getPage(p+1),base=pg.getViewport({scale:1}),vp=pg.getViewport({scale:Math.min(3.2,2400/base.width)});
+      const cv=document.createElement('canvas');cv.width=Math.floor(vp.width);cv.height=Math.floor(vp.height);await pg.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+      const d=await tessRead(cv,3);
+      const t=(d.paragraphs&&d.paragraphs.length?d.paragraphs.map(x=>x.text.replace(/-\n(?=[a-z])/g,'').replace(/\s*\n\s*/g,' ').trim()).filter(Boolean).join('\n\n'):(d.text||'').trim());
+      TX[p]=ocrFix(t)||' ';saveTX();ok++;
+    }catch(e){msg=`Page ${p+1} could not be read. Pages done so far are saved.`;break}
   }
   ocrAbort=null;
   if(doc&&doc.id===id){render();setOS(msg||`Done. ${ok} page${ok===1?'':'s'} transcribed.`)}
@@ -2397,7 +2417,8 @@ function listenStart(from,opt){
   LS.resume=null;lockWake();speakFrom(i);
 }
 function listenPause(){if(!LS.on)return;clearInterval(LS.est);if(SS&&SS.t0){SS.ms+=performance.now()-SS.t0;SS.t0=null}LS.on=false;LS.resume=LS.cur;LS.utt=null;clearTimeout(LS.timer);try{synth.cancel()}catch(x){}releaseWake();updListenUI()}
-function listenStop(){clearInterval(LS.est);LS.q=null;LS.qi=0;LS.stopAt=null;LS.onDone=null;LS.on=false;LS.resume=null;LS.utt=null;clearTimeout(LS.timer);try{synth&&synth.cancel()}catch(x){}clearSpeak();releaseWake();updListenUI()}
+let plainTok=0;
+function listenStop(){plainTok++;clearInterval(LS.est);LS.q=null;LS.qi=0;LS.stopAt=null;LS.onDone=null;LS.on=false;LS.resume=null;LS.utt=null;clearTimeout(LS.timer);try{synth&&synth.cancel()}catch(x){}clearSpeak();releaseWake();updListenUI()}
 function updListenUI(){const rg=$('#lvRange');if(rg){const on=(LS.on||LS.resume!=null)&&LS.stopAt!=null&&!LS.q;rg.hidden=!on;if(on)rg.textContent='Reading your selection only'}
   const b=$('#lvPlay');b.textContent=LS.on?'❚❚ Pause':LS.resume!=null?'▶ Resume':'▶ Listen';b.setAttribute('aria-label',LS.on?'Pause listening':'Listen');$('#lvStop').hidden=!(LS.on||LS.resume!=null)}
 $('#lvPlay').onclick=()=>LS.on?listenPause():listenStart();
@@ -2411,6 +2432,147 @@ $('#hbListenSel').onclick=()=>{const r=pendingSel||(editingHl&&editingHl.s!=null
 $('#hbListen').onclick=()=>{const w=pendingSel?pendingSel.s:editingHl&&editingHl.s!=null?editingHl.s:null;if(w==null)return;try{getSelection().removeAllRanges()}catch(x){}hideBar();listenStart(w)};
 $('#study').addEventListener('dblclick',e=>{if(pen!==0)return;const sp=e.target.closest('span[data-i]');if(!sp)return;try{getSelection().removeAllRanges()}catch(x){}hideBar();listenStart(+sp.dataset.i)});
 $('#study').addEventListener('click',e=>{if(!LS.on||pen!==0)return;const sp=e.target.closest('span[data-i]');if(!sp)return;const sel=getSelection();if(sel&&!sel.isCollapsed)return;LS.q=null;speakFrom(+sp.dataset.i)});
+
+/* ================= key points and summary ================= */
+// Uses the browser's own on-device AI when the device has it (Chrome/Edge Summarizer API);
+// otherwise picks the most central sentences from the text itself. Nothing leaves the device.
+const KP_STOP=new Set('a about above after again against all also am an and any are as at be because been before being below between both but by can could did do does doing down during each few for from further had has have having he her here hers him his how i if in into is it its itself just me more most my no nor not now of off on once only or other our ours out over own same she should so some such than that the their theirs them then there these they this those through to too under until up upon very was we were what when where which while who whom why will with would you your yours however therefore thus also may might must shall one two three first second et al eg ie per via within without among across although though since whether either neither rather often well many much'.split(' '));
+let KP=null,kpBusy=false;
+function kpSentences(){
+  const f=S.lvSkip!==false?furniture():new Set(),out=[];let i=0;
+  while(i<W.length){
+    let e=sentenceEnd(i);if(e<=i)e=i+1;
+    const ix=[];for(let k=i;k<e;k++)if(!f.has(k))ix.push(k);
+    if(ix.length){const head=H[ix[0]]&&H[ix[ix.length-1]];out.push({s:i,e,ix,head,text:ix.map(k=>speakable(W[k])).join(' ')})}
+    i=e;
+  }
+  return out;
+}
+function kpTerms(t){return t.toLowerCase().replace(/[’']s\b/g,'').match(/[a-z][a-z\-]{2,}/g)?.filter(w=>!KP_STOP.has(w)).map(w=>w.replace(/(ies)$/,'y').replace(/([^s])s$/,'$1'))||[]}
+function kpExtract(){
+  const sents=kpSentences();if(sents.length<4)return null;
+  // section of each sentence from the nearest heading before it
+  let sec='';for(const s of sents){if(s.head){sec=s.text.toLowerCase();s.isHead=true}s.sec=sec}
+  const usable=sents.filter(s=>{if(s.isHead)return false;const n=s.ix.length;if(n<8||n>70)return false;
+    const t=s.text,dig=(t.match(/\d/g)||[]).length,cites=(t.match(/\(\s*[A-Z][^()]{0,60}\d{4}[a-z]?\s*\)/g)||[]).length;
+    const lastW=W[s.ix[s.ix.length-1]]||'';
+    if(!/^["“‘'A-Z]/.test(t)||/^(key\s?words|jel|received|accepted|published|corresponding|how to cite|figure|table|source|note)\b/i.test(t)||/^\(?(cf|art|e\.g|i\.e|pp?|vol|no|al|ch|fig|eq|ed|eds|op|ibid)\.?$/i.test(lastW))return false;
+    return dig<t.length*0.08&&cites<3&&!/https?:|doi\.org|©|all rights reserved/i.test(t)});
+  if(usable.length<3)return null;
+  const df=new Map(),tfs=usable.map(s=>{const m=new Map();for(const w of kpTerms(s.text))m.set(w,(m.get(w)||0)+1);for(const w of m.keys())df.set(w,(df.get(w)||0)+1);return m});
+  const N=usable.length,vec=tfs.map(m=>{const v=new Map();let nn=0;for(const [w,c] of m){const x=(1+Math.log(c))*Math.log(1+N/(df.get(w)||1));v.set(w,x);nn+=x*x}nn=Math.sqrt(nn)||1;for(const [w,x] of v)v.set(w,x/nn);return v});
+  const sim=(a,b)=>{let s=0;const [p,q]=a.size<b.size?[a,b]:[b,a];for(const [w,x] of p){const y=q.get(w);if(y)s+=x*y}return s};
+  // centrality (TextRank-style, a few power iterations on a sparse similarity graph)
+  const nb=vec.map(()=>[]);for(let x=0;x<N;x++)for(let y=x+1;y<N;y++){const s=sim(vec[x],vec[y]);if(s>0.06){nb[x].push([y,s]);nb[y].push([x,s])}}
+  const deg=nb.map(l=>l.reduce((t,[,s])=>t+s,0)||1);let r=new Array(N).fill(1/N);
+  for(let it=0;it<25;it++){const r2=new Array(N).fill(0.15/N);for(let x=0;x<N;x++)for(const [y,s] of nb[x])r2[y]+=0.85*r[x]*s/deg[x];r=r2}
+  const maxR=Math.max(...r)||1;
+  const CUE=/\b(this (paper|study|article|research|chapter)|we (argue|find|found|show|propose|suggest|conclude|contend|examine|develop)|(the|our) (results?|findings?) (show|suggest|indicate|reveal)|in conclusion|in sum(mary)?|contribut\w*|implications?|key (finding|point|insight)|it is (argued|suggested|proposed)|we recommend|should|must)\b/i;
+  const score=usable.map((s,k)=>{let v=r[k]/maxR;
+    if(/abstract|summary/.test(s.sec))v+=0.45;if(/conclu|discussion|implication|recommend/.test(s.sec))v+=0.35;if(/introduc/.test(s.sec))v+=0.1;
+    if(CUE.test(s.text))v+=0.3;if(s.ix.length<12)v-=0.15;if(/^(but|and|so|this|these|that|it|they|however|thus)\b/i.test(s.text))v-=0.1;
+    return v});
+  const K=Math.max(6,Math.min(12,Math.round(N*0.035))),pick=[],order=score.map((v,k)=>k).sort((a,b)=>score[b]-score[a]);
+  for(const k of order){if(pick.length>=K)break;if(pick.some(j=>sim(vec[j],vec[k])>0.45))continue;pick.push(k)}
+  pick.sort((a,b)=>usable[a].s-usable[b].s);
+  // key terms
+  const tf=new Map();tfs.forEach(m=>{for(const [w,c] of m)tf.set(w,(tf.get(w)||0)+c)});
+  const terms=[...tf].filter(([w])=>w.length>3&&df.get(w)>=3&&df.get(w)<N*0.5).map(([w,c])=>[w,c*Math.log(1+N/df.get(w))]).sort((a,b)=>b[1]-a[1]).slice(0,10).map(x=>x[0]);
+  return {method:'extract',points:pick.map(k=>({t:usable[k].text,s:usable[k].s,e:usable[k].e})),terms,at:Date.now(),words:W.length};
+}
+async function kpAiAvailable(){
+  try{if(!('Summarizer' in self))return 'no';return await Summarizer.availability()}catch(e){return 'no'}
+}
+function kpMatch(t){
+  // place an AI point next to the sentence in the text that it is closest to
+  const want=new Set(kpTerms(t));if(!want.size)return null;let best=null,bs=0;
+  for(const s of KP._sents||[]){if(s.isHead||s.ix.length<6)continue;const got=kpTerms(s.text);let hit=0;for(const w of new Set(got))if(want.has(w))hit++;const sc=hit/Math.sqrt(want.size*Math.max(4,new Set(got).size));if(sc>bs){bs=sc;best=s}}
+  return bs>0.25?best:null;
+}
+async function kpAi(ext,onStep){
+  const opts={sharedContext:'A reading for a doctoral business student. Keep the author\'s claims, arguments and findings; ignore citations and page furniture.',format:'markdown',outputLanguage:'en',expectedInputLanguages:['en']};
+  const mk=async o=>Summarizer.create(Object.assign({},opts,o,{monitor(m){m.addEventListener('downloadprogress',e=>onStep(`Getting the on-device AI ready (one time): ${Math.round((e.loaded||0)*100)}%`))}}));
+  const kp=await mk({type:'key-points',length:'short'});
+  const body=kpSentences().filter(s=>!s.isHead).map(s=>s.text).join(' ');
+  let quota=8000;try{if(kp.inputQuota)quota=Math.max(2000,Math.floor(kp.inputQuota*2.6))}catch(e){}
+  const chunks=[];for(let i=0;i<body.length;){let j=Math.min(body.length,i+quota);if(j<body.length){const d=body.lastIndexOf('. ',j);if(d>i+quota*0.5)j=d+1}chunks.push(body.slice(i,j));i=j}
+  const parts=[];
+  for(let c=0;c<chunks.length;c++){onStep(`Reading part ${c+1} of ${chunks.length}…`);parts.push(await kp.summarize(chunks[c]))}
+  let joined=parts.join('\n');
+  const fin=await mk({type:'key-points',length:'long'});onStep('Writing the key points…');
+  const pts=chunks.length>1?await fin.summarize(joined.slice(0,quota)):parts[0];
+  let td;try{td=await mk({type:'tldr',length:'medium'})}catch(e){td=await mk({type:'tl;dr',length:'medium'})}onStep('Writing the overview…');
+  const over=await td.summarize((chunks.length>1?joined:chunks[0]).slice(0,quota));
+  try{kp.destroy();fin.destroy();td.destroy()}catch(e){}
+  const points=pts.split('\n').map(x=>x.replace(/^\s*([-*•]|\d+[.)])\s*/,'').replace(/\*\*/g,'').trim()).filter(x=>x.length>3).map(t=>{const m=kpMatch(t);return {t,s:m?m.s:null,e:m?m.e:null}});
+  // only trust a real summary: a handful of short points, clearly shorter than the reading
+  const bad=/not available|unavailable|error/i;
+  if(points.length<2||points.length>25||points.some(p=>p.t.length>450)||bad.test(over)||bad.test(pts)||(pts.length+over.length)>body.length*0.5)return null;
+  return {method:'ai',overview:over.replace(/\*\*/g,'').trim(),points,terms:ext?ext.terms:[],at:Date.now(),words:W.length};
+}
+function renderKP(){
+  const b=$('#kpBody');if(!b)return;
+  const has=KP&&KP.docId===(doc&&doc.id)&&KP.points&&KP.points.length;
+  $('#kpListen').hidden=$('#kpCopy').hidden=$('#kpNote').hidden=!has;$('#kpGo').textContent=has?'Redo':'✦ Find key points';
+  if(!doc||doc.kind==='scan'){b.innerHTML=`<p class="hint">${doc?'Key points need text. Turn the scan into text first (see Guide → Scanned documents).':'Open a reading first.'}</p>`;$('#kpGo').disabled=true;return}
+  $('#kpGo').disabled=kpBusy;
+  if(!has){b.innerHTML='<p class="hint">Get the main points of this reading before you start, then listen to them or jump to each one in the text.</p>';return}
+  const src=KP.method==='ai'?'Summary by the on-device AI in your browser':'Key sentences taken from the text (no AI on this device)';
+  b.innerHTML=`<p class="kpsrc">${esc(src)}</p>${KP.overview?`<p class="kpover">${esc(KP.overview)}</p>`:''}<ol class="kplist">${KP.points.map((p,k)=>`<li><span>${esc(p.t)}</span>${p.s!=null?` <button class="linkish" data-k="${k}">Show in text</button>`:''}</li>`).join('')}</ol>${KP.terms&&KP.terms.length?`<p class="kpterms">${KP.terms.map(t=>`<span>${esc(t)}</span>`).join('')}</p>`:''}`;
+}
+function kpGo(i){
+  if(S.rm!=='study')setRm('study');
+  ci=chunkAt(i);savePos();render();
+  setTimeout(()=>{const sp=spanOf(i);if(sp){sp.scrollIntoView({block:'center',behavior:'smooth'});spansOf(i).forEach(x=>{x.classList.add('kpflash');setTimeout(()=>x.classList.remove('kpflash'),2200)})}else if(scrollActive()){scrollToPage(search(doc.pdfPages,i),true)}},S.rm==='study'&&doc.pdfPages&&fileRec?650:80);
+}
+async function kpRun(){
+  if(!doc||doc.kind==='scan'||kpBusy)return;
+  kpBusy=true;const st=t=>{$('#kpBody').innerHTML=`<p class="hint">${esc(t)}</p>`};st('Finding the key points…');$('#kpGo').disabled=true;
+  await new Promise(r=>setTimeout(r,30));
+  let res=null;const ext=kpExtract();const sents=kpSentences();
+  try{
+    const av=await kpAiAvailable();
+    if(av!=='no'&&av!=='unavailable'){KP={_sents:sents};res=await kpAi(ext,st)}
+  }catch(e){res=null}
+  if(!res)res=ext;
+  kpBusy=false;
+  if(!res){KP=null;$('#kpBody').innerHTML='<p class="hint">This reading is too short to summarise.</p>';$('#kpGo').disabled=false;return}
+  res.docId=doc.id;KP=res;try{IDB.put('kp:'+doc.id,res)}catch(e){}
+  renderKP();
+}
+async function loadKP(){
+  KP=null;if(!doc){renderKP();return}
+  try{const r=await IDB.get('kp:'+doc.id);if(r&&r.words===W.length&&doc){r.docId=doc.id;KP=r}}catch(e){}
+  renderKP();
+}
+$('#kpGo').onclick=kpRun;
+$('#kpBody').addEventListener('click',e=>{const b=e.target.closest('button[data-k]');if(!b||!KP)return;const p=KP.points[+b.dataset.k];if(p&&p.s!=null)kpGo(p.s)});
+$('#kpClaude').onclick=()=>{
+  if(!doc||doc.kind==='scan'){toast('Open a text reading first');return}
+  const sents=kpSentences();let out='',prevHead=false;
+  for(const x of sents){if(x.isHead){out+=(out?'\n\n':'')+'## '+x.text+'\n';prevHead=true}else{out+=(prevHead||!out?'':' ')+x.text;prevHead=false}}
+  const prompt=`I am a Doctor of Business Administration student. Help me study the reading below.\n\n1. Overview: what the reading is about and its main argument, in about 150 words.\n2. Key points: the author's main claims and findings, as bullet points.\n3. Key concepts: each with a one-line definition as the author uses it.\n4. Evidence and method: what the argument rests on, and its main limitations.\n5. Use in my work: how I could use or challenge this reading in a DBA assignment or thesis.\n6. Check my understanding: five questions, with short answers at the end.\n\nStay close to the text and say when something is your interpretation rather than the author's.\n\nTitle: ${doc.name}\n\n---\n${out.trim()}`;
+  const fall=()=>{const ta=$('#hlExport');ta.hidden=false;ta.value=prompt;ta.focus();ta.select();toast('Copy was blocked here. The text is selected in the Highlights box; copy it with your keyboard.')};
+  try{navigator.clipboard.writeText(prompt).then(()=>toast(`Copied ${fmt(prompt.split(/\s+/).length)} words. Open Claude and paste.`),fall)}catch(e){fall()}
+};
+$('#kpPlain').onclick=()=>{if(!doc||doc.kind==='scan'||doc.id==='sample'){toast(doc&&doc.id==='sample'?'Open one of your own readings first':'Open a text reading first');return}const w=window.open('text.html?id='+encodeURIComponent(doc.id),'_blank');if(!w)toast('Allow pop-ups for this site, then try again')};
+$('#kpCopy').onclick=()=>{if(!KP)return;const txt=(KP.overview?KP.overview+'\n\n':'')+KP.points.map((p,k)=>`${k+1}. ${p.t}`).join('\n');
+  const fall=()=>{const ta=$('#hlExport');ta.hidden=false;ta.value=txt;ta.focus();ta.select();toast('Copy was blocked here. The text is selected in the Highlights box; copy it with your keyboard.')};
+  try{navigator.clipboard.writeText(txt).then(()=>toast('Key points copied'),fall)}catch(e){fall()}};
+$('#kpNote').onclick=()=>{if(!KP||!doc)return;const ta=$('#noteText');const block=`Key points (${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short'})})\n`+KP.points.map(p=>'• '+p.t).join('\n');ta.value=(ta.value.trim()?ta.value.trim()+'\n\n':'')+block;ta.dispatchEvent(new Event('input',{bubbles:true}));toast('Added to My notes')};
+$('#kpListen').onclick=()=>{
+  if(!KP||!doc)return;
+  const q=KP.points.filter(p=>p.s!=null).map(p=>[p.s,p.e]).sort((a,b)=>a[0]-b[0]);
+  if(KP.method==='extract'&&q.length){listenStart(q[0][0],{q,onDone:()=>toast('Finished the key points')});return}
+  speakPlain([KP.overview,...KP.points.map(p=>p.t)].filter(Boolean));
+};
+function speakPlain(list){
+  if(!synth){toast('This browser cannot read aloud.');return}
+  listenStop();const my=++plainTok;let k=0;const v=pickVoice();$('#lvStop').hidden=false;
+  const next=()=>{if(my!==plainTok)return;if(k>=list.length){$('#lvStop').hidden=true;toast('Finished the key points');return}const u=new SpeechSynthesisUtterance(speakable(list[k++]));if(v){u.voice=v;u.lang=v.lang}u.rate=+S.lvRate||1;u.onend=()=>setTimeout(next,450*(+S.lvBreath||1));u.onerror=()=>{};synth.speak(u)};
+  next();
+}
+
 function syncListenUI(){$('#lvSkip').checked=S.lvSkip!==false;$('#lvRate').value=String(S.lvRate||1);$('#lvBreath').value=String(S.lvBreath||1);fillVoices();updListenUI()}
 
 /* ================= study session ================= */
@@ -2929,6 +3091,50 @@ function cleanSummary(r){
 /* reading order for two-column pages: whole left column, then right column, with full-width lines (titles, abstracts) kept in place */
 // Some PDFs (often older or scanned journals) store each printed row across both columns as one line.
 // Find the gutter between columns and cut those rows in two, so each column reads on its own.
+
+/* ================= offline text recognition (Tesseract) ================= */
+let tessP=null,tessBusy=Promise.resolve();
+function getTess(){
+  if(tessP)return tessP;
+  tessP=(async()=>{
+    await new Promise((res,rej)=>{if(window.Tesseract)return res();const sc=document.createElement('script');sc.src='vendor/tess/tesseract.min.js';sc.onload=res;sc.onerror=()=>rej(new Error('load'));document.head.appendChild(sc)});
+    const base=new URL('vendor/tess/',location.href).href;
+    const w=await Tesseract.createWorker('eng',1,{workerPath:base+'worker.min.js',corePath:base,langPath:base.replace(/\/$/,''),gzip:true,workerBlobURL:false});
+    return w;
+  })().catch(e=>{tessP=null;throw e});
+  return tessP;
+}
+function ocrFix(t){return String(t).replace(/\b1s\b/g,'is').replace(/\b1n\b/g,'in').replace(/\bot\b/g,'of').replace(/\btor\b/g,'for').replace(/\bTor\b/g,'For').replace(/[‘’]/g,"'").replace(/\s+([,.;:])/g,'$1')}
+async function tessRead(canvas,psm){
+  const w=await getTess();
+  const run=tessBusy.then(async()=>{await w.setParameters({tessedit_pageseg_mode:String(psm),preserve_interword_spaces:'0'});return (await w.recognize(canvas)).data});
+  tessBusy=run.catch(()=>{});return run;
+}
+// Lines whose hidden text is stretched and cut short (scanned journals): read them again from the page image.
+async function ocrRepair(page,lines,v,p,fname,N){
+  const bad=lines.filter(l=>l.damaged&&l.parts&&l.parts.length);if(!bad.length)return;
+  try{
+    if(typeof status==='function')status(`Repairing ${bad.length} damaged line${bad.length>1?'s':''} on page ${p+1} of ${N} (reading the page image)…`);
+    const vp=page.getViewport({scale:2.6});const cv=document.createElement('canvas');cv.width=Math.floor(vp.width);cv.height=Math.floor(vp.height);
+    await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+    const good=lines.filter(l=>!l.damaged&&l.parts&&l.parts.length&&l.x1-l.x0>40);
+    for(const l of bad){
+      const pw=Math.abs(v[2]-v[0])||612,same=good.filter(g=>Math.abs(g.x0-l.x0)<25);
+      const left=same.length?Math.min(...same.map(g=>g.x0)):l.x0;
+      // where the next column starts (if this line is in a left column)
+      const nextCol=good.filter(g=>g.x0>left+pw*0.25&&g.x1-g.x0>pw*0.2&&Math.abs(g.y-l.y)<pw*0.5).map(g=>g.x0);const rx=nextCol.length?Math.min(...nextCol):pw;
+      let right=nextCol.length?rx-9:(same.length?Math.max(...same.map(g=>g.x1)):left+(pw-left)*0.45);
+      const a=vp.convertToViewportPoint(left-4,l.y+l.size*1.05),b=vp.convertToViewportPoint(right+2,l.y-l.size*0.3);
+      const x=Math.max(0,Math.floor(Math.min(a[0],b[0]))),y=Math.max(0,Math.floor(Math.min(a[1],b[1]))),w=Math.min(cv.width-x,Math.ceil(Math.abs(b[0]-a[0]))),h=Math.min(cv.height-y,Math.ceil(Math.abs(b[1]-a[1])));
+      if(w<20||h<8)continue;
+      const c2=document.createElement('canvas');c2.width=w+20;c2.height=h+20;const g2=c2.getContext('2d');g2.fillStyle='#fff';g2.fillRect(0,0,c2.width,c2.height);g2.drawImage(cv,x,y,w,h,10,10,w,h);
+      const d=await tessRead(c2,7);const t=ocrFix((d.text||'').replace(/\s+/g,' ').trim()),old=l.parts.map(q=>q.s).join(' ').replace(/\s+/g,' ').trim();
+      if(!t||d.confidence<45||t.length<old.length*0.9)continue;
+      l.parts=[{s:t,x:left,y:l.y,w:right-left,size:l.size,sp:true}];l.x0=left;l.x1=right;l.last=t;l.ocr=true;
+    }
+  }catch(e){/* no OCR available (first use offline): keep the text as it is */}
+}
+
 function splitAtGutter(lines){
   const ls=lines.filter(l=>l.parts&&l.parts.length);if(ls.length<8)return;
   const minX=Math.min(...ls.map(l=>l.x0)),maxX=Math.max(...ls.map(l=>l.x1)),span=maxX-minX;if(span<100)return;
@@ -3026,7 +3232,8 @@ async function readPdf(file,opts){
     if(cur)lines.push(cur);
     // broken hidden text (some scanned journals): a line stretched far wider than its words could be. Squeeze it back.
     {const pw=Math.abs(v[2]-v[0])||612;for(const l of lines){if(!l.parts||!l.parts.length)continue;const ext=l.x1-l.x0,est=l.parts.reduce((t,q)=>t+q.s.length,0)*l.size*0.5;
-      if(ext>est*1.6&&est>=l.size*6&&(l.x1>pw||ext>pw*0.4)){const k=est/ext;for(const q of l.parts){q.x=l.x0+(q.x-l.x0)*k;q.w=q.w*k}l.x1=l.x0+ext*k}}}
+      if(ext>est*1.6&&est>=l.size*6&&(l.x1>pw||ext>pw*0.4)){const k=est/ext;for(const q of l.parts){q.x=l.x0+(q.x-l.x0)*k;q.w=q.w*k}l.x1=l.x0+ext*k;l.damaged=true}}}
+    if(typeof ocrRepair==='function'&&opts.ocr!==false)await ocrRepair(page,lines,v,p,file.name,N);
     splitAtGutter(lines);
     for(const l of lines){let n=0,tt=0;l.parts.forEach(q=>{const c=q.s.trim().length;n+=c;tt+=q.size*c});l.size=n?tt/n:l.size;l.text=l.parts.map((q,i)=>(i&&q.sp?' ':'')+q.s).join('').replace(/\s+/g,' ').trim()}
     pagesL.push({lines,y0,H:Hh});
