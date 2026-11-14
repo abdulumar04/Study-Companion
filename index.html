@@ -385,6 +385,9 @@ svg.ink{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;ove
 .drillbar .txt{background:var(--surface)}
 .backup{border-top:1px solid var(--rule);margin-top:16px;padding-top:14px;display:flex;flex-direction:column;gap:8px}
 .backup h2{margin:0}
+.gsync{border:1px solid var(--rule);background:var(--surface);color:var(--accent);font:500 12px var(--ui);padding:4px 10px;border-radius:999px;cursor:pointer}
+.gsync[data-state="tap"],.gsync[data-state="off"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.gsync[data-state="err"]{color:var(--bad)}
 footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-size:12.5px;color:var(--ink-3);max-width:80ch}
 #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:10px;font-size:14px;max-width:calc(100% - 32px);box-shadow:0 6px 20px rgba(0,0,0,.2);z-index:20}
 </style>
@@ -392,7 +395,7 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
 <body>
 <div class="wrap">
 <header class="top">
-  <div class="brand"><h1>DBA Study Companion</h1><span class="sync local" id="sync">Saved on this device</span></div>
+  <div class="brand"><h1>DBA Study Companion</h1><span class="sync local" id="sync">Saved on this device</span><button class="gsync" id="gSync" hidden>☁ Sign in to sync</button></div>
   <nav class="tabs" role="tablist" aria-label="Sections">
     <button role="tab" data-view="home" aria-selected="true">Course</button>
     <button role="tab" data-view="read" aria-selected="false">Read</button>
@@ -570,6 +573,15 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
         <label class="btn small" for="bkIn" style="display:inline-block;text-align:center">Restore from backup…</label>
         <input type="file" id="bkIn" accept=".json,application/json" hidden>
       </div>
+      <div class="backup" id="gPanel" hidden>
+        <h2>Sync with Google Drive</h2>
+        <p class="hint">Sign in with Google to keep materials, highlights, notes, calendar and progress the same on all your devices. It is stored in a private app folder in your own Google Drive that only this app can open. Everything still works offline and syncs when you are back online.</p>
+        <p class="hint" id="gStatus"></p>
+        <label class="check"><input type="checkbox" id="gOrig"><span>Also sync original files, so printed pages and ink appear on every device (uses more data)</span></label>
+        <button class="btn small primary" id="gNow">Sync now</button>
+        <button class="btn small" id="gOut" hidden>Sign out of sync</button>
+      </div>
+
     </aside>
     <div class="stack">
       <div class="panel">
@@ -764,7 +776,7 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
       <h3>Your data, privacy and backups</h3>
       <ul>
         <li><b>Nothing is uploaded.</b> Your materials, highlights, ink, notes, calendar and results stay in this browser on this device. Nobody else can see them, including whoever shared the link.</li>
-        <li><b>It does not sync between devices.</b> Your laptop and your iPad each keep their own library. To move your work, save a backup on one and restore it on the other.</li>
+        <li><b>Sync across devices (optional):</b> press <b>☁ Sign in to sync</b> at the top and sign in with Google. Your work is kept in a private app folder in your own Google Drive and stays the same on your laptop, phone and tablet. It syncs by itself about a minute after changes while you are signed in; after an hour Google asks you to tap <b>☁ Tap to sync</b> again. Without sync, each device keeps its own library; use a backup to move your work.</li>
         <li><b>Backups:</b> <b>Materials → Save a backup</b> downloads one file with everything except the original files (tick <b>Include original files</b> to keep those too; the file is then much larger). <b>Restore from backup</b> replaces what is in the app with the backup.</li>
         <li><b>What can erase your data:</b> clearing your browser's history and site data, uninstalling the browser, using a private window, and on iPhone or iPad, not opening the app for a few weeks. A recent backup protects you from all of them.</li>
         <li><b>Keep your originals</b> in OneDrive, Google Drive or iCloud. Treat this app as your reading desk, not your only copy.</li>
@@ -975,14 +987,14 @@ function syncHelp(){
   else if(syncState==='error')toast('Some changes have not reached your account yet. They are safe in this browser and will be sent automatically.');
 }
 function persistProfile(now){
-  P.updated=Date.now();if(!store.set('rl2.profile',P))storageFull();
+  P.updated=Date.now();if(!store.set('rl2.profile',P))storageFull();onLocalChange();
   clearTimeout(Cloud.timer);
   const push=()=>Cloud.set('profile',clone(P));
   if(now)push();else Cloud.timer=setTimeout(push,1500);
 }
 function persistLog(){
   if(LOG.sessions.length>800)LOG.sessions=LOG.sessions.slice(-800);
-  store.set('rl2.log',LOG);Cloud.set('log',clone(LOG));
+  LOG.updated=Date.now();store.set('rl2.log',LOG);Cloud.set('log',clone(LOG));onLocalChange();
 }
 const PART=150000;
 function uploadText(meta,text){
@@ -1083,6 +1095,7 @@ async function loadOrig(meta){
   if(pdfDoc){try{pdfDoc.destroy()}catch(e){}pdfDoc=null}
   if(!meta.pdfPages)return;
   const r=await IDB.get(meta.id);
+  if(r&&r.pdf&&!(r.geo&&r.geo.length===meta.words*5)){try{status('Preparing the printed pages…');const rr=await readPdf(new File([r.pdf],meta.file||'reading.pdf'),meta.opts||P.importOpts);if(rr.words===meta.words){r.geo=rr.geo;await IDB.put(meta.id,r)}status('')}catch(e){}}
   if(r&&r.geo&&r.geo.length===meta.words*5)fileRec=r;
 }
 async function ensurePdf(){
@@ -1415,7 +1428,7 @@ function loadHL(id){
 }
 function saveHL(){
   if(!doc)return;const id=doc.id,obj={updated:Date.now(),list:HL};
-  store.set('rl2.hl.'+id,obj);
+  store.set('rl2.hl.'+id,obj);onLocalChange();
   clearTimeout(hlTimer);hlTimer=setTimeout(()=>Cloud.set('h_'+id,clone(obj)),800);
 }
 const snip=h=>h.p!=null?(h.note?'Marked area: '+h.note:'Marked area'):W.slice(h.s,Math.min(h.e,h.s+28)).join(' ')+(h.e-h.s>28?'…':'');
@@ -1590,7 +1603,7 @@ function loadNote(id){
 }
 function saveNote(){
   if(!doc)return;const id=doc.id,text=$('#noteText').value.slice(0,200000),t=Date.now();
-  store.set('rl2.note.'+id,text);store.set('rl2.noteT.'+id,t);
+  store.set('rl2.note.'+id,text);store.set('rl2.noteT.'+id,t);onLocalChange();
   clearTimeout(noteTimer);$('#noteState').textContent='Saving…';
   noteTimer=setTimeout(()=>{Cloud.set('n_'+id,{updated:t,text});$('#noteState').textContent=Cloud.col?'Saved to your account':'Saved in this browser'},900);
 }
@@ -1815,7 +1828,7 @@ async function inkPage(p){
 }
 function saveInk(p){
   if(!doc)return;const id=doc.id;
-  inkCache[p].updated=Date.now();IDB.put('ink:'+id,inkCache);
+  inkCache[p].updated=Date.now();IDB.put('ink:'+id,inkCache).then(onLocalChange);
   const m=P.docs.find(x=>x.id===id);
   if(m){const set=new Set(m.inkPages||[]);if(inkCache[p].strokes.length)set.add(p);m.inkPages=[...set];persistProfile()}
   clearTimeout(inkTimers[p]);inkTimers[p]=setTimeout(()=>Cloud.set(`k_${id}_${p}`,clone(inkCache[p])),1000);
@@ -2006,7 +2019,7 @@ const TYPES={class:'Class',deadline:'Submission deadline',exam:'Exam or test',ot
 const pad=n=>String(n).padStart(2,'0');
 const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const todayYmd=()=>ymd(new Date());
-function saveCal(){CAL.updated=Date.now();store.set('rl2.cal',CAL);Cloud.set('calendar',clone(CAL))}
+function saveCal(){CAL.updated=Date.now();store.set('rl2.cal',CAL);onLocalChange();Cloud.set('calendar',clone(CAL))}
 async function loadCalCloud(){
   if(!Cloud.col)return;
   try{const s=await Cloud.col.doc('calendar').get();
@@ -3319,6 +3332,7 @@ async function sha(data){
   try{if(!crypto||!crypto.subtle)return null;const buf=typeof data==='string'?new TextEncoder().encode(data):data;const h=await crypto.subtle.digest('SHA-256',buf);return [...new Uint8Array(h)].slice(0,16).map(b=>b.toString(16).padStart(2,'0')).join('')}catch(e){return null}
 }
 async function removeDoc(id){
+  P.deleted=P.deleted||{};P.deleted[id]=Date.now();
   const d=P.docs.find(x=>x.id===id);
   if(d&&d.cloud)for(let i=0;i<(d.parts||1);i++)Cloud.del('t_'+id+'_'+i);
   Cloud.del('h_'+id);Cloud.del('n_'+id);
@@ -3370,6 +3384,7 @@ async function siftDuplicates(manual){
   }finally{siftRunning=false}
 }
 
+function onLocalChange(){}
 /* ================= storage safety ================= */
 let fullWarned=false;
 function storageFull(){if(fullWarned)return;fullWarned=true;toast('This browser is running out of storage space. Make a backup and remove materials you no longer need.')}
@@ -3449,6 +3464,161 @@ $('#bkIn').addEventListener('change',async e=>{
     toast('Restored. Reloading…');setTimeout(()=>location.reload(),800);
   }catch(x){toast('Restore failed: '+(x.message||x))}
 });
+
+/* ================= Google Drive sync (each person's own Drive, hidden app folder) ================= */
+const GOOGLE_CLIENT_ID="394263201654-hp23pb8uj70m73c89c25prq36cn03idr.apps.googleusercontent.com";
+const GD={token:null,exp:0,busy:false,dirty:false,timer:null,again:false};
+const gSync={get(){return Object.assign({on:false,last:0,orig:true},store.get('rl2.gsync',{}))},set(v){store.set('rl2.gsync',v)}};
+function ago(t){if(!t)return '';const m=Math.round((Date.now()-t)/60000);return m<1?'just now':m<60?m+' min ago':m<1440?Math.round(m/60)+' h ago':dShort(t)}
+function setG(state,text){
+  const b=$('#gSync');if(!b)return;b.hidden=!GOOGLE_CLIENT_ID;b.dataset.state=state;b.textContent='☁ '+text;
+  const st=$('#gStatus');if(st)st.textContent=text;
+  const out=$('#gOut');if(out)out.hidden=!gSync.get().on;
+}
+function gIdle(){const g=gSync.get();if(!g.on)setG('off','Sign in to sync');else if(GD.token&&Date.now()<GD.exp-60000)setG('ok','Synced '+ago(g.last));else setG('tap',(g.last?'Synced '+ago(g.last)+' · ':'')+'tap to sync')}
+function loadGis(){return new Promise((res,rej)=>{if(window.google&&google.accounts&&google.accounts.oauth2)return res();const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.onload=()=>res();s.onerror=()=>{s.remove();rej(new Error('Could not reach Google. Check your connection.'))};document.head.appendChild(s)})}
+async function gdToken(){
+  if(GD.token&&Date.now()<GD.exp-60000)return GD.token;
+  await loadGis();
+  return new Promise((res,rej)=>{
+    const c=google.accounts.oauth2.initTokenClient({client_id:GOOGLE_CLIENT_ID,scope:'https://www.googleapis.com/auth/drive.appdata',
+      callback:r=>{if(!r||r.error){rej(new Error((r&&(r.error_description||r.error))||'Sign-in failed'));return}GD.token=r.access_token;GD.exp=Date.now()+(+r.expires_in||3600)*1000;res(GD.token)},
+      error_callback:e=>rej(new Error(e&&e.type==='popup_closed'?'The Google sign-in window was closed.':e&&e.type==='popup_failed_to_open'?'Your browser blocked the Google sign-in window. Allow pop-ups for this site and try again.':'Google sign-in failed.'))});
+    c.requestAccessToken({prompt:''});
+  });
+}
+async function gfetch(url,opt){
+  if(!GD.token)throw {code:401};
+  opt=Object.assign({},opt);opt.headers=Object.assign({},opt.headers,{Authorization:'Bearer '+GD.token});
+  const r=await fetch(url,opt);
+  if(r.status===401){GD.token=null;throw {code:401}}
+  if(!r.ok)throw new Error('Google Drive error '+r.status);
+  return r;
+}
+const DRIVE='https://www.googleapis.com/drive/v3/files',UPLOAD='https://www.googleapis.com/upload/drive/v3/files';
+async function gdList(){
+  const out={};let pt='';
+  do{const r=await gfetch(`${DRIVE}?spaces=appDataFolder&pageSize=1000&fields=nextPageToken,files(id,name,appProperties)${pt?'&pageToken='+encodeURIComponent(pt):''}`);const j=await r.json();
+    for(const f of j.files||[]){const u=+((f.appProperties||{}).u||0);if(!out[f.name]||u>out[f.name].u)out[f.name]={id:f.id,u}}pt=j.nextPageToken}while(pt);
+  return out;
+}
+async function gdPut(name,content,u,id,mime){
+  const meta={appProperties:{u:String(u)}};if(!id){meta.name=name;meta.parents=['appDataFolder']}
+  const big=typeof content!=='string'&&content.byteLength>4e6;
+  if(!big){
+    const bd='dsc'+Math.random().toString(36).slice(2);
+    const body=new Blob([`--${bd}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${bd}\r\nContent-Type: ${mime}\r\n\r\n`,content,`\r\n--${bd}--`]);
+    const r=await gfetch(`${UPLOAD}${id?'/'+id:''}?uploadType=multipart&fields=id`,{method:id?'PATCH':'POST',headers:{'Content-Type':'multipart/related; boundary='+bd},body});
+    return (await r.json()).id;
+  }
+  const r=await gfetch(`${UPLOAD}${id?'/'+id:''}?uploadType=resumable&fields=id`,{method:id?'PATCH':'POST',headers:{'Content-Type':'application/json; charset=UTF-8','X-Upload-Content-Type':mime},body:JSON.stringify(meta)});
+  const loc=r.headers.get('Location');if(!loc)throw new Error('Google Drive did not accept the upload.');
+  const r2=await fetch(loc,{method:'PUT',body:content});if(!r2.ok)throw new Error('Upload failed ('+r2.status+')');
+  return (await r2.json()).id;
+}
+async function gdGet(id,bin){const r=await gfetch(`${DRIVE}/${id}?alt=media`);return bin?await r.arrayBuffer():await r.text()}
+async function gdDel(id){try{await gfetch(`${DRIVE}/${id}`,{method:'DELETE'})}catch(e){if(e&&e.code===401)throw e}}
+function mergeProfile(r){
+  const del=Object.assign({},r.deleted||{},P.deleted||{});
+  const newer=(r.updated||0)>(P.updated||0)?r:P,older=newer===r?P:r;
+  const ids=new Set(),docs=[];
+  for(const d of [...(newer.docs||[]),...(older.docs||[])]){if(ids.has(d.id)||del[d.id])continue;ids.add(d.id);const o=(older.docs||[]).find(x=>x.id===d.id);const m=Object.assign({},d);if(o){m.pos=Math.max(d.pos||0,o.pos||0);m.lastOpened=Math.max(d.lastOpened||0,o.lastOpened||0)||undefined}const l=P.docs.find(x=>x.id===d.id);if(l&&l.idbText)m.idbText=true;docs.push(m)}
+  const fids=new Set(),folders=[];for(const f of [...(newer.folders||[]),...(older.folders||[])]){if(!fids.has(f.id)){fids.add(f.id);folders.push(f)}}
+  const before=new Set(P.docs.map(d=>d.id));
+  P=Object.assign({},clone(newer),{docs,folders,deleted:del});
+  Object.assign(S,DEF_S,P.settings||{});P.settings=S;P.importOpts=Object.assign({},DEF_IO,P.importOpts||{});
+  return [...before].filter(id=>del[id]);
+}
+function mergeLog(r){
+  const m=(a,b)=>{const mp=new Map();[...(a||[]),...(b||[])].forEach(x=>mp.set(x.date,x));return [...mp.values()].sort((x,y)=>x.date-y.date)};
+  LOG={sessions:m(r.sessions,LOG.sessions),tests:m(r.tests,LOG.tests),drills:m(r.drills,LOG.drills),updated:Math.max(r.updated||0,LOG.updated||0)};
+  store.set('rl2.log',LOG);
+}
+async function docItems(gs){
+  const items={};
+  for(const d of P.docs){
+    const id=d.id;
+    const hl=store.get('rl2.hl.'+id,null);if(hl&&hl.updated)items['hl.'+id]={u:hl.updated,get:()=>localStorage.getItem('rl2.hl.'+id),mime:'application/json'};
+    const nt=store.get('rl2.noteT.'+id,0);if(nt)items['note.'+id]={u:nt,get:()=>JSON.stringify({t:nt,text:store.get('rl2.note.'+id,'')}),mime:'application/json'};
+    const ink=await IDB.get('ink:'+id);if(ink){let u=0;for(const k in ink)u=Math.max(u,(ink[k]&&ink[k].updated)||0);if(u)items['ink.'+id]={u,get:()=>JSON.stringify(ink),mime:'application/json'}}
+    if(d.kind!=='scan'){const t=mem[id]||await IDB.get('text:'+id)||store.get('rl2.text.'+id,null);if(t)items['text.'+id]={u:d.added||1,imm:true,get:()=>t,mime:'text/plain; charset=UTF-8'}}
+    if(gs.orig){let bytes=null,mime='application/octet-stream';const r=await IDB.get(id);if(r&&r.pdf){bytes=r.pdf;mime='application/pdf'}else{const o=await IDB.get('orig:'+id);if(o&&o.data)bytes=o.data}
+      if(bytes)items['orig.'+id]={u:d.added||1,imm:true,bin:true,get:()=>bytes,mime}}
+  }
+  return items;
+}
+async function applyDocItem(name,data){
+  const dot=name.indexOf('.'),kind=name.slice(0,dot),id=name.slice(dot+1),d=P.docs.find(x=>x.id===id);if(!d)return false;
+  if(kind==='hl')localStorage.setItem('rl2.hl.'+id,data);
+  else if(kind==='note'){const n=JSON.parse(data);store.set('rl2.note.'+id,n.text||'');store.set('rl2.noteT.'+id,n.t||Date.now())}
+  else if(kind==='ink')await IDB.put('ink:'+id,JSON.parse(data));
+  else if(kind==='text'){await IDB.put('text:'+id,data);d.idbText=true}
+  else if(kind==='orig'){if(d.kind==='scan'||d.pdfPages)await IDB.put(id,{pdf:data,name:d.file,scan:d.kind==='scan'||undefined});else await IDB.put('orig:'+id,{name:d.file||d.name,data})}
+  return doc&&doc.id===id;
+}
+async function gdSync(manual){
+  if(!GOOGLE_CLIENT_ID)return;
+  if(!navigator.onLine){if(manual)toast('You are offline. Your work is saved on this device and will sync when you are back online.');gIdle();return}
+  if(GD.busy){GD.again=true;return}
+  GD.busy=true;GD.dirty=false;setG('syncing','Syncing…');
+  let touchedOpen=false;
+  try{
+    if(manual)await gdToken();else if(!GD.token||Date.now()>GD.exp-60000){GD.busy=false;gIdle();return}
+    const gs=gSync.get();if(!gs.on){gs.on=true;gSync.set(gs)}
+    savePos();
+    const remote=await gdList();
+    /* library, progress and calendar */
+    const rp=remote['profile.json'];
+    if(rp&&rp.u!==(gs.pu||0)){const gone=mergeProfile(JSON.parse(await gdGet(rp.id)));for(const id of gone){await removeDoc(id);touchedOpen=true}}
+    P.updated=Date.now();store.set('rl2.profile',P);
+    gs.pu=P.updated;remote['profile.json']={id:await gdPut('profile.json',JSON.stringify(P),P.updated,rp&&rp.id,'application/json'),u:P.updated};
+    const rl=remote['log.json'],cnt=x=>(x.sessions||[]).length+(x.tests||[]).length+(x.drills||[]).length;let needLog=!rl;
+    if(rl&&rl.u!==(gs.lu||0)){const r=JSON.parse(await gdGet(rl.id));mergeLog(r);if(cnt(LOG)>cnt(r))needLog=true}
+    else if(rl&&(LOG.updated||0)>rl.u)needLog=true;
+    if(needLog){LOG.updated=Date.now();store.set('rl2.log',LOG);await gdPut('log.json',JSON.stringify(LOG),LOG.updated,rl&&rl.id,'application/json');gs.lu=LOG.updated}else if(rl)gs.lu=rl.u;
+    const rc=remote['calendar.json'];
+    if(rc&&rc.u>(CAL.updated||0)){const c=JSON.parse(await gdGet(rc.id));CAL=c;if(!CAL.courses)CAL.courses={};store.set('rl2.cal',CAL)}
+    else if((CAL.updated||0)&&(!rc||(CAL.updated||0)>rc.u))await gdPut('calendar.json',JSON.stringify(CAL),CAL.updated,rc&&rc.id,'application/json');
+    /* each material: text, original file, highlights, notes, ink */
+    const items=await docItems(gs);
+    const names=new Set([...Object.keys(items),...Object.keys(remote).filter(n=>/^(hl|note|ink|text|orig)\./.test(n))]);
+    let n=0;const total=names.size;
+    for(const name of names){
+      n++;if(total>6)setG('syncing',`Syncing ${n} of ${total}…`);
+      const id=name.slice(name.indexOf('.')+1),L=items[name],Rm=remote[name];
+      if(P.deleted&&P.deleted[id]){if(Rm)await gdDel(Rm.id);continue}
+      if(!P.docs.some(d=>d.id===id))continue;
+      if(name.startsWith('orig.')&&!gs.orig)continue;
+      if(L&&!Rm)await gdPut(name,L.get(),L.u,null,L.mime);
+      else if(!L&&Rm){if(await applyDocItem(name,await gdGet(Rm.id,name.startsWith('orig.'))))touchedOpen=true}
+      else if(L&&Rm&&!L.imm){if(Rm.u>L.u){if(await applyDocItem(name,await gdGet(Rm.id)))touchedOpen=true}else if(L.u>Rm.u)await gdPut(name,L.get(),L.u,Rm.id,L.mime)}
+    }
+    gs.last=Date.now();gSync.set(gs);
+    store.set('rl2.profile',P);
+    setG('ok','Synced just now');
+    if(touchedOpen&&doc&&view==='read'&&!playing&&!LS.on)await openDoc(doc.id,true);
+    syncUI();refreshView();
+    if(manual)toast('Synced with your Google Drive');
+  }catch(e){
+    if(e&&e.code===401){GD.token=null;setG('tap','Tap to sync');if(manual)toast('Please sign in to Google again.')}
+    else{setG('err','Sync failed · tap to retry');if(manual)toast((e&&e.message)||'Sync failed. Your work is safe on this device.')}
+  }finally{
+    GD.busy=false;if(GD.again){GD.again=false;setTimeout(()=>gdSync(false),2000)}
+  }
+}
+function markDirty(){
+  if(!GOOGLE_CLIENT_ID||!gSync.get().on)return;
+  GD.dirty=true;clearTimeout(GD.timer);
+  GD.timer=setTimeout(()=>{if(GD.token&&Date.now()<GD.exp-60000)gdSync(false);else gIdle()},40000);
+}
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&GD.dirty&&GD.token&&Date.now()<GD.exp-60000){clearTimeout(GD.timer);gdSync(false)}});
+window.addEventListener('online',()=>{if(GD.dirty&&GD.token)gdSync(false)});
+$('#gSync').onclick=()=>gdSync(true);
+$('#gNow').onclick=()=>gdSync(true);
+$('#gOrig').onchange=e=>{const g=gSync.get();g.orig=e.target.checked;gSync.set(g)};
+$('#gOut').onclick=()=>{try{if(GD.token&&window.google)google.accounts.oauth2.revoke(GD.token,()=>{})}catch(e){}GD.token=null;const g=gSync.get();g.on=false;gSync.set(g);gIdle();toast('Signed out. Your work stays on this device.')};
+onLocalChange=markDirty;
+(function(){const g=gSync.get();$('#gOrig').checked=g.orig;$('#gPanel').hidden=!GOOGLE_CLIENT_ID;gIdle()})();
 
 /* ================= misc ================= */
 let tt=null;
