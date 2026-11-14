@@ -518,6 +518,7 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
       <div class="panel study-only">
         <h2>My notes</h2>
         <textarea id="noteText" placeholder="Notes on this material. Saved automatically."></textarea>
+        <div class="row-gap" style="margin-top:8px"><button class="btn small" id="noteListen">▶ Listen to my notes</button></div>
         <div class="row-gap" style="margin-top:10px"><button class="btn small" id="noteAi" hidden>Draft study notes</button><span class="hint" id="noteState"></span></div>
       </div>
       <div class="panel train-only">
@@ -757,6 +758,8 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
         <li>In Study mode press <b>▶ Listen</b>. The reading is spoken sentence by sentence, with the current word highlighted and the page turning by itself. Press <b>❚❚ Pause</b> to stop and <b>▶ Resume</b> to carry on from the same word.</li>
         <li><b>Start anywhere:</b> double-tap (or double-click) any word and reading starts there. While it is reading, a single click on a word jumps there. You can also select words and choose <b>Listen from here</b>.</li>
         <li><b>Read only a part:</b> select the passage, then choose <b>Listen to selection only</b>. It stops at the end of your selection; the bar shows "Reading your selection only" until then.</li>
+        <li><b>Listen to your highlights:</b> in the Highlights panel press <b>▶ Listen to highlights</b>. It reads each highlight in order, and after any highlight that has a note, it reads your note too ("Your note: …").</li>
+        <li><b>Listen to your notes:</b> under My notes press <b>▶ Listen to my notes</b>. It reads your notes line by line, then the notes you attached to highlights, saying which words each one is about.</li>
         <li><b>Skip page numbers, headers and footers</b> (on by default): running heads, page numbers, journal footers and "Downloaded from…" lines stamped on every page are not read aloud. Untick it to hear everything.</li>
         <li><b>One or two columns:</b> each page is laid out on its own, so title blocks, side panels, abstracts and one- or two-column text are read in the order you would read them. Words broken across two lines (like "perspec- / tive") are read and highlighted as one word.</li>
         <li><b>Voice:</b> the most natural voice on your device is chosen automatically and marked ★; robotic voices are hidden (tick <b>All voices</b> to see them). <b>Speed</b> runs from 0.8× to 2×. <b>Pauses</b> sets how long it breathes at full stops and paragraph ends.</li>
@@ -2369,10 +2372,12 @@ function furniture(){
   if(P.length>=3){const nz=w=>String(w).toLowerCase().replace(/\d+/g,'#'),seen=new Map();
     for(let p=0;p<P.length;p++){const a=P[p],b=p+1<P.length?P[p+1]:W.length,mine=new Set();for(let i=a;i+6<=b;i++){const k=W.slice(i,i+6).map(nz).join(' ');if(!mine.has(k)){mine.add(k);seen.set(k,(seen.get(k)||0)+1)}}}
     const need=Math.max(3,Math.ceil(P.length*0.5));
-    for(let i=0;i+6<=W.length;i++){const k=W.slice(i,i+6).map(nz).join(' ');if((seen.get(k)||0)>=need)for(let j=i;j<i+6;j++)furnSet.add(j)}}
-  // keep a margin line out only if it repeats on other pages or carries a page number
+    const rep=new Set();for(let i=0;i+6<=W.length;i++){const k=W.slice(i,i+6).map(nz).join(' ');if((seen.get(k)||0)>=need)for(let j=i;j<i+6;j++)rep.add(j)}
+    // stamped text is a small share of a reading; if 'repeated' text is a big share, the reading simply repeats itself, so keep it
+    if(rep.size<W.length*0.12)rep.forEach(j=>furnSet.add(j))}
+  // keep a margin line out only if it repeats on other pages or carries a page number (and never most of the text)
   const cnt={};cand.forEach(c=>{cnt[c[1]]=(cnt[c[1]]||0)+1});
-  cand.forEach(c=>{if(cnt[c[1]]>=2||/^(page )?#( of #)?$/.test(c[1].trim()))c[2].forEach(i=>furnSet.add(i))});
+  {const add=new Set();cand.forEach(c=>{if(cnt[c[1]]>=2||/^(page )?#( of #)?$/.test(c[1].trim()))c[2].forEach(i=>add.add(i))});if(add.size<W.length*0.15)add.forEach(i=>furnSet.add(i))}
   return furnSet;
 }
 function skipFurn(i){if(!S.lvSkip)return i;const f=furniture();while(i<W.length&&f.has(i))i++;return i}
@@ -2383,9 +2388,10 @@ function speakFrom(i,tries){
   clearTimeout(LS.timer);clearInterval(LS.est);
   if(busy&&(tries||0)<6){LS.utt=null;LS.on=true;LS.timer=setTimeout(()=>{if(LS.on)speakFrom(i,(tries||0)+1)},140);return}
   if(!doc||!W.length||i>=W.length){const fin=doc&&W.length&&i>=W.length;listenStop();if(fin)toast('Finished reading');return}
-  i=skipFurn(i);
+  const chosen=!!LS.q;// highlights: read exactly what you marked
+  if(!chosen){const j=skipFurn(i);if(j<W.length&&(LS.stopAt==null||j<LS.stopAt))i=j}
   let e=sentenceEnd(i);if(LS.q&&LS.q[LS.qi])e=Math.min(e,LS.q[LS.qi][1]);if(LS.stopAt!=null)e=Math.min(e,LS.stopAt);if(e<=i)e=sentenceEnd(i);
-  const fset=S.lvSkip?furniture():null,idx=[];for(let k=i;k<e;k++)if(!fset||!fset.has(k))idx.push(k);
+  const fset=S.lvSkip&&!chosen?furniture():null,idx=[];for(let k=i;k<e;k++)if(!fset||!fset.has(k))idx.push(k);
   const words=idx.map(k=>speakable(W[k])),offs=[];let c=0;for(const w of words){offs.push(c);c+=w.length+1}
   const u=new SpeechSynthesisUtterance(words.join(' '));
   const v=pickVoice();if(v){u.voice=v;u.lang=v.lang}
@@ -2400,8 +2406,14 @@ function speakFrom(i,tries){
     clearInterval(LS.est);
     if(LS.utt!==u||!LS.on)return;
     const last=E[e-1],base=H[e-1]?650:last===3?520:last===2?160:last===1?60:0;
-    let next=e,extra=0;
-    if(LS.q){if(next>=LS.q[LS.qi][1]){LS.qi++;if(LS.qi>=LS.q.length){listenStop();toast('Finished your highlights');return}next=LS.q[LS.qi][0];extra=700}}
+    let next=e,extra=0,hnote=null;
+    if(LS.q){if(next>=LS.q[LS.qi][1]){hnote=LS.qn&&LS.qn[LS.qi];LS.qi++;const done=LS.qi>=LS.q.length;
+      if(!done){next=LS.q[LS.qi][0];extra=700}
+      if(hnote){// read the note you attached to this highlight, then carry on
+        const nu=new SpeechSynthesisUtterance('Your note: '+speakable(hnote));const vv=pickVoice();if(vv){nu.voice=vv;nu.lang=vv.lang}nu.rate=+S.lvRate||1;LS.utt=nu;
+        nu.onend=()=>{if(LS.utt!==nu||!LS.on)return;if(done){listenStop();toast('Finished your highlights');return}LS.cur=next;LS.timer=setTimeout(()=>{if(LS.on&&LS.utt===nu)speakFrom(next)},600)};
+        nu.onerror=()=>{};LS.timer=setTimeout(()=>{if(LS.on&&LS.utt===nu)synth.speak(nu)},450);return}
+      if(done){listenStop();toast('Finished your highlights');return}}}
     if(LS.stopAt!=null&&next>=LS.stopAt){const cb=LS.onDone;LS.cur=next;listenStop();if(cb)cb();return}
     LS.cur=next;LS.timer=setTimeout(()=>{if(LS.on&&LS.utt===u)speakFrom(next)},base*(+S.lvBreath||1)/Math.max(.8,+S.lvRate||1)+extra);
   };
@@ -2420,7 +2432,7 @@ function listenStart(from,opt){
 }
 function listenPause(){if(!LS.on)return;clearInterval(LS.est);if(SS&&SS.t0){SS.ms+=performance.now()-SS.t0;SS.t0=null}LS.on=false;LS.resume=LS.cur;LS.utt=null;clearTimeout(LS.timer);try{synth.cancel()}catch(x){}releaseWake();updListenUI()}
 let plainTok=0;
-function listenStop(){plainTok++;clearInterval(LS.est);LS.q=null;LS.qi=0;LS.stopAt=null;LS.onDone=null;LS.on=false;LS.resume=null;LS.utt=null;clearTimeout(LS.timer);try{synth&&synth.cancel()}catch(x){}clearSpeak();releaseWake();updListenUI()}
+function listenStop(){plainTok++;LS.qn=null;clearInterval(LS.est);LS.q=null;LS.qi=0;LS.stopAt=null;LS.onDone=null;LS.on=false;LS.resume=null;LS.utt=null;clearTimeout(LS.timer);try{synth&&synth.cancel()}catch(x){}clearSpeak();releaseWake();updListenUI()}
 function updListenUI(){const rg=$('#lvRange');if(rg){const on=(LS.on||LS.resume!=null)&&LS.stopAt!=null&&!LS.q;rg.hidden=!on;if(on)rg.textContent='Reading your selection only'}
   const b=$('#lvPlay');b.textContent=LS.on?'❚❚ Pause':LS.resume!=null?'▶ Resume':'▶ Listen';b.setAttribute('aria-label',LS.on?'Pause listening':'Listen');$('#lvStop').hidden=!(LS.on||LS.resume!=null)}
 $('#lvPlay').onclick=()=>LS.on?listenPause():listenStart();
@@ -2577,15 +2589,24 @@ $('#kpListen').onclick=()=>{
   if(!KP||!doc)return;
   const q=KP.points.filter(p=>p.s!=null).map(p=>[p.s,p.e]).sort((a,b)=>a[0]-b[0]);
   if(KP.method==='extract'&&q.length){listenStart(q[0][0],{q,onDone:()=>toast('Finished the key points')});return}
-  speakPlain([KP.overview,...KP.points.map(p=>p.t)].filter(Boolean));
+  speakPlain([KP.overview,...KP.points.map(p=>p.t)].filter(Boolean),'Finished the key points');
 };
-function speakPlain(list){
+function speakPlain(list,doneMsg){
   if(!synth){toast('This browser cannot read aloud.');return}
   listenStop();const my=++plainTok;let k=0;const v=pickVoice();$('#lvStop').hidden=false;
-  const next=()=>{if(my!==plainTok)return;if(k>=list.length){$('#lvStop').hidden=true;toast('Finished the key points');return}const u=new SpeechSynthesisUtterance(speakable(list[k++]));if(v){u.voice=v;u.lang=v.lang}u.rate=+S.lvRate||1;u.onend=()=>setTimeout(next,450*(+S.lvBreath||1));u.onerror=()=>{};synth.speak(u)};
+  const next=()=>{if(my!==plainTok)return;if(k>=list.length){$('#lvStop').hidden=true;toast(doneMsg||'Finished');return}const u=new SpeechSynthesisUtterance(speakable(list[k++]));if(v){u.voice=v;u.lang=v.lang}u.rate=+S.lvRate||1;u.onend=()=>setTimeout(next,450*(+S.lvBreath||1));u.onerror=()=>{};synth.speak(u)};
   next();
 }
 
+$('#noteListen').onclick=()=>{
+  if(!doc){toast('Open a reading first');return}
+  const list=[];const t=$('#noteText').value.trim();
+  if(t)list.push(...t.split(/\n+/).map(x=>x.replace(/^[•*\-–]\s*/,'').trim()).filter(Boolean));
+  const hn=HL.filter(h=>h.note&&h.note.trim()).sort((a,b)=>((a.p??-1)-(b.p??-1))||((a.s??0)-(b.s??0)));
+  if(hn.length){list.push(hn.length===1?'And your note on a highlight.':`And your ${hn.length} notes on highlights.`);for(const h of hn){const q=h.p!=null?'a marked area':'“'+W.slice(h.s,Math.min(h.e,h.s+12)).join(' ')+(h.e-h.s>12?'…':'')+'”';list.push(`On ${q}: ${h.note.trim()}`)}}
+  if(!list.length){toast('No notes yet. Type in My notes, or add a note to a highlight.');return}
+  speakPlain(list,'Finished your notes');
+};
 function syncListenUI(){$('#lvSkip').checked=S.lvSkip!==false;$('#lvRate').value=String(S.lvRate||1);$('#lvBreath').value=String(S.lvBreath||1);fillVoices();updListenUI()}
 
 /* ================= study session ================= */
@@ -2651,8 +2672,8 @@ $('#ssGo').onclick=ssStart;
 $('#hlListen').onclick=()=>{
   if(!doc||doc.kind==='scan'){toast('Listening to highlights works on text materials');return}
   const r=HL.filter(h=>h.p==null).sort((a,b)=>a.s-b.s);if(!r.length){toast('No text highlights to listen to yet');return}
-  const m=[];for(const h of r){const l=m[m.length-1];if(l&&h.s<=l[1])l[1]=Math.max(l[1],h.e);else m.push([h.s,h.e])}
-  listenStart(m[0][0],{q:m});
+  const m=[],qn=[];for(const h of r){const l=m[m.length-1];if(l&&h.s<=l[1]){l[1]=Math.max(l[1],h.e);if(h.note)qn[m.length-1]=(qn[m.length-1]?qn[m.length-1]+'. ':'')+h.note}else{m.push([h.s,h.e]);qn[m.length-1]=h.note||null}}
+  listenStart(m[0][0],{q:m});LS.qn=qn;
 };
 
 /* ================= ladder drill ================= */
