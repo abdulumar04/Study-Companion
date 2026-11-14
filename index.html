@@ -381,11 +381,14 @@ svg.ink{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;ove
 .listenbar .lsel{flex:1 1 220px;min-width:0;max-width:340px;padding:5px 8px}
 .listenbar .lsel2{width:auto;padding:5px 8px}
 .listenbar .lall{font-size:12.5px;color:var(--ink-3)}
+.listenbar .ltip{flex-basis:100%;font-size:12.5px;color:var(--ink-3)}
+.listenbar .lrange{font-size:12.5px;padding:3px 8px;border-radius:99px;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--ink)}
+.study span.lstart{box-shadow:inset 3px 0 0 var(--accent)}
 .listenbar .hint{flex-basis:100%}
 .listenbar .hint:empty{display:none}
-.study span.speak-s{box-shadow:inset 0 -2px 0 color-mix(in srgb,var(--accent) 45%,transparent)}
-.study span.speak{background:color-mix(in srgb,var(--accent) 28%,transparent)!important;border-radius:3px}
-.tl span.speak{background:color-mix(in srgb,var(--accent) 35%,transparent)!important}
+.study span.speak-s{background:color-mix(in srgb,var(--accent) 10%,transparent);box-shadow:inset 0 -2px 0 color-mix(in srgb,var(--accent) 55%,transparent)}
+.study span.speak{background:color-mix(in srgb,var(--accent) 34%,transparent)!important;border-radius:3px;outline:1.5px solid color-mix(in srgb,var(--accent) 70%,transparent)}
+.tl span.speak{background:color-mix(in srgb,var(--accent) 40%,transparent)!important}
 .study.veiled{filter:blur(7px);pointer-events:none;user-select:none}
 .drillbar ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:3px}
 .drillbar textarea{min-height:120px;background:var(--surface)}
@@ -432,7 +435,9 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
             <select id="lvRate" class="txt lsel2" aria-label="Reading speed"><option value="0.8">0.8×</option><option value="0.9">0.9×</option><option value="1">1×</option><option value="1.1">1.1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="1.75">1.75×</option><option value="2">2×</option></select>
             <select id="lvBreath" class="txt lsel2" aria-label="Pauses"><option value="1">Natural pauses</option><option value="1.8">Longer pauses</option><option value="0.5">Short pauses</option></select>
             <label class="check lall"><input type="checkbox" id="lvAll"><span>All voices</span></label>
+            <span class="lrange" id="lvRange" hidden></span>
             <span class="hint" id="lvHint"></span>
+            <span class="hint ltip">Start anywhere: double-tap a word. Read just a part: select it, then <b>Listen to selection only</b>.</span>
           </div>
           <div class="pens" id="pens" role="group" aria-label="Highlighter pens">
             <span class="penlab">Pens</span>
@@ -557,7 +562,7 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
   </div>
   <div id="hlbar" role="toolbar" aria-label="Highlight" hidden>
     <button class="sw h1" data-c="1" aria-label="Highlight yellow"></button><button class="sw h2" data-c="2" aria-label="Highlight green"></button><button class="sw h3" data-c="3" aria-label="Highlight blue"></button><button class="sw h4" data-c="4" aria-label="Highlight pink"></button>
-    <button class="btn small" id="hbListen">▶ Listen from here</button><button class="btn small" id="hbTrain">Train from here</button><button class="btn small" id="hbNote">Note</button><button class="btn small danger" id="hbDel" hidden>Remove</button>
+    <button class="btn small" id="hbListen">▶ Listen from here</button><button class="btn small" id="hbListenSel">▶ Listen to selection only</button><button class="btn small" id="hbTrain">Train from here</button><button class="btn small" id="hbNote">Note</button><button class="btn small danger" id="hbDel" hidden>Remove</button>
     <div id="hbNoteBox" hidden><input id="hbNoteIn" class="txt" placeholder="Add a note" aria-label="Highlight note"><button class="btn small primary" id="hbNoteSave">Save</button></div>
   </div>
 </section>
@@ -724,7 +729,9 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
       <h3>Listen (read aloud)</h3>
       <ul>
         <li>In Study mode press <b>▶ Listen</b>. The reading is spoken sentence by sentence, with the current word highlighted and the page turning by itself. Press <b>❚❚ Pause</b> to stop and <b>▶ Resume</b> to carry on from the same word.</li>
-        <li><b>Start anywhere:</b> select some words and choose <b>Listen from here</b>, or while it is reading, click any word to jump there.</li>
+        <li><b>Start anywhere:</b> double-tap (or double-click) any word and reading starts there. While it is reading, a single click on a word jumps there. You can also select words and choose <b>Listen from here</b>.</li>
+        <li><b>Read only a part:</b> select the passage, then choose <b>Listen to selection only</b>. It stops at the end of your selection; the bar shows "Reading your selection only" until then.</li>
+        <li><b>One or two columns:</b> each page is laid out on its own, so title blocks, side panels, abstracts and one- or two-column text are read in the order you would read them. Words broken across two lines (like "perspec- / tive") are read and highlighted as one word.</li>
         <li><b>Voice:</b> the most natural voice on your device is chosen automatically and marked ★; robotic voices are hidden (tick <b>All voices</b> to see them). <b>Speed</b> runs from 0.8× to 2×. <b>Pauses</b> sets how long it breathes at full stops and paragraph ends.</li>
         <li><b>Best voices by device:</b> Windows and Surface: open the app in <b>Microsoft Edge</b> for Microsoft's Natural voices (they need an internet connection). iPhone and iPad: download a Premium or Enhanced voice in Settings → Accessibility → Spoken Content → Voices. Android: Chrome's Google voices; more can be added in Settings → Text-to-speech.</li>
         <li>You can keep highlighting and taking notes while it reads.</li>
@@ -1165,10 +1172,15 @@ async function alignPage(page,wrap,vp,p){
         const rg=document.createRange();rg.setStart(node,o0);rg.setEnd(node,o1);
         const bb=rg.getBoundingClientRect();if(!bb.width||!bb.height)continue;
         rects[i]=[(bb.left-W0.left)/vp.width,(bb.top-W0.top)/vp.height,bb.width/vp.width,bb.height/vp.height];
+        // word broken across lines (e.g. "perspec- / tive"): also mark the part on the next line
+        if(c1-starts[k]>node.length){const k2=search(starts,c1-1),d2=divs[k2],n2=d2&&d2.firstChild;
+          if(k2>k&&n2&&n2.nodeType===3){const e2=Math.min(n2.length,c1-starts[k2]);if(e2>0){const r2=document.createRange();r2.setStart(n2,0);r2.setEnd(n2,e2);const b2=r2.getBoundingClientRect();if(b2.width&&b2.height)rects[i].push((b2.left-W0.left)/vp.width,(b2.top-W0.top)/vp.height,b2.width/vp.width,b2.height/vp.height)}}}
       }
       lay.remove();alignCache[key]=rects;
     }
-    wrap.querySelectorAll('.tl span[data-i]').forEach(sp=>{const r=rects[+sp.dataset.i];if(!r)return;const L=r[0]*vp.width,T=r[1]*vp.height,Wd=r[2]*vp.width,Ht=r[3]*vp.height;sp.style.left=L.toFixed(1)+'px';sp.style.top=T.toFixed(1)+'px';sp.style.width=Wd.toFixed(1)+'px';sp.style.height=Ht.toFixed(1)+'px';sp.style.fontSize=(Ht*0.8).toFixed(1)+'px'});
+    wrap.querySelectorAll('.tl span[data-tail]').forEach(x=>x.remove());
+    wrap.querySelectorAll('.tl span[data-i]:not([data-tail])').forEach(sp=>{const r=rects[+sp.dataset.i];if(!r)return;
+      if(r.length>4){const t=sp.cloneNode(false);t.dataset.tail='1';t.textContent='';t.style.left=(r[4]*vp.width).toFixed(1)+'px';t.style.top=(r[5]*vp.height).toFixed(1)+'px';t.style.width=(r[6]*vp.width).toFixed(1)+'px';t.style.height=(r[7]*vp.height).toFixed(1)+'px';sp.after(t)}const L=r[0]*vp.width,T=r[1]*vp.height,Wd=r[2]*vp.width,Ht=r[3]*vp.height;sp.style.left=L.toFixed(1)+'px';sp.style.top=T.toFixed(1)+'px';sp.style.width=Wd.toFixed(1)+'px';sp.style.height=Ht.toFixed(1)+'px';sp.style.fontSize=(Ht*0.8).toFixed(1)+'px'});
     return rects;
   }catch(e){return null}
 }
@@ -1481,7 +1493,7 @@ let selT=null,pendingSel=null,editingHl=null;
 const bar=$('#hlbar');
 function hideBar(){bar.hidden=true;$('#hbNoteBox').hidden=true;pendingSel=null;editingHl=null}
 function showBar(rect,edit){
-  bar.hidden=false;$('#hbDel').hidden=!edit;$('#hbTrain').hidden=!!(doc&&doc.kind==='scan');$('#hbListen').hidden=!!(doc&&doc.kind==='scan');$('#hbNoteBox').hidden=true;
+  bar.hidden=false;$('#hbDel').hidden=!edit;$('#hbTrain').hidden=!!(doc&&doc.kind==='scan');$('#hbListen').hidden=!!(doc&&doc.kind==='scan');$('#hbListenSel').hidden=!!(doc&&doc.kind==='scan');$('#hbNoteBox').hidden=true;
   const bw=bar.offsetWidth,bh=bar.offsetHeight;
   let left=rect.left+rect.width/2-bw/2;left=Math.max(12,Math.min(window.innerWidth-bw-12,left));
   let top=rect.top-bh-10;if(top<12)top=rect.bottom+10;
@@ -2286,6 +2298,7 @@ function fillVoices(){
 if(synth)synth.addEventListener('voiceschanged',fillVoices);
 function clearSpeak(){LS.marks.forEach(el=>el.classList.remove('speak','speak-s'));LS.marks=[]}
 function spanOf(i){return $(`#study span[data-i="${i}"]`)}
+function spansOf(i){return $$(`#study span[data-i="${i}"]`)}
 function ensureShown(i){
   if(view!=='read'||S.rm!=='study')return;
   if(scrollActive()){
@@ -2301,24 +2314,30 @@ function ensureShown(i){
 }
 function markSpeak(s,e,w){
   clearSpeak();ensureShown(w!=null?w:s);
-  for(let i=s;i<e;i++){const el=spanOf(i);if(el){el.classList.add('speak-s');LS.marks.push(el)}}
-  if(w!=null){const el=spanOf(w);if(el){el.classList.add('speak');LS.marks.push(el)}}
+  for(let i=s;i<e;i++)for(const el of spansOf(i)){el.classList.add('speak-s');LS.marks.push(el)}
+  if(w!=null)for(const el of spansOf(w)){el.classList.add('speak');LS.marks.push(el)}
 }
+function speakable(w){return String(w).normalize('NFKC').replace(/[\u00AD\u200B-\u200D\u2060\uFEFF]/g,'').replace(/[\u2010\u2011]/g,'-')||' '}
 function sentenceEnd(i){let e=i;while(e<W.length-1&&E[e]<2)e++;return e+1}
-function speakFrom(i){
+function speakFrom(i,tries){
   if(!synth){toast('This browser cannot read aloud.');return}
-  try{synth.cancel()}catch(x){}
-  clearTimeout(LS.timer);
+  let busy=false;try{busy=synth.speaking||synth.pending;if(busy)synth.cancel()}catch(x){}
+  clearTimeout(LS.timer);clearInterval(LS.est);
+  if(busy&&(tries||0)<6){LS.utt=null;LS.on=true;LS.timer=setTimeout(()=>{if(LS.on)speakFrom(i,(tries||0)+1)},140);return}
   if(!doc||!W.length||i>=W.length){const fin=doc&&W.length&&i>=W.length;listenStop();if(fin)toast('Finished reading');return}
   let e=sentenceEnd(i);if(LS.q&&LS.q[LS.qi])e=Math.min(e,LS.q[LS.qi][1]);if(LS.stopAt!=null)e=Math.min(e,LS.stopAt);if(e<=i)e=sentenceEnd(i);
-  const words=W.slice(i,e),offs=[];let c=0;for(const w of words){offs.push(c);c+=w.length+1}
+  const words=W.slice(i,e).map(speakable),offs=[];let c=0;for(const w of words){offs.push(c);c+=w.length+1}
   const u=new SpeechSynthesisUtterance(words.join(' '));
   const v=pickVoice();if(v){u.voice=v;u.lang=v.lang}
   u.rate=+S.lvRate||1;u.pitch=1;
   LS.on=true;LS.cur=i;LS.utt=u;
-  u.onstart=()=>{if(LS.utt===u)markSpeak(i,e,i)};
-  u.onboundary=ev=>{if(LS.utt!==u||(ev.name&&ev.name!=='word'))return;const k=Math.max(0,search(offs,ev.charIndex||0));LS.cur=i+k;markSpeak(i,e,i+k)};
+  let gotB=false,t0=0;
+  u.onstart=()=>{if(LS.utt!==u)return;markSpeak(i,e,i);t0=performance.now();
+    // Some voices send no word timings: estimate the current word from elapsed time instead.
+    clearInterval(LS.est);LS.est=setInterval(()=>{if(LS.utt!==u||gotB){clearInterval(LS.est);return}const el=performance.now()-t0;if(el<450)return;const k=Math.min(words.length-1,Math.max(0,search(offs,el/1000*14.5*(+S.lvRate||1))));if(i+k!==LS.cur){LS.cur=i+k;markSpeak(i,e,i+k)}},150)};
+  u.onboundary=ev=>{if(LS.utt!==u||(ev.name&&ev.name!=='word'))return;gotB=true;const k=Math.max(0,search(offs,ev.charIndex||0));LS.cur=i+k;markSpeak(i,e,i+k)};
   u.onend=()=>{
+    clearInterval(LS.est);
     if(LS.utt!==u||!LS.on)return;
     const last=E[e-1],base=H[e-1]?650:last===3?520:last===2?160:last===1?60:0;
     let next=e,extra=0;
@@ -2339,16 +2358,19 @@ function listenStart(from,opt){
   if(i==null)i=LS.resume!=null?LS.resume:(()=>{const a=studyStarts();return a[search(a,chunks[ci]||0)]})();
   LS.resume=null;lockWake();speakFrom(i);
 }
-function listenPause(){if(!LS.on)return;if(SS&&SS.t0){SS.ms+=performance.now()-SS.t0;SS.t0=null}LS.on=false;LS.resume=LS.cur;LS.utt=null;clearTimeout(LS.timer);try{synth.cancel()}catch(x){}releaseWake();updListenUI()}
-function listenStop(){LS.q=null;LS.qi=0;LS.stopAt=null;LS.onDone=null;LS.on=false;LS.resume=null;LS.utt=null;clearTimeout(LS.timer);try{synth&&synth.cancel()}catch(x){}clearSpeak();releaseWake();updListenUI()}
-function updListenUI(){const b=$('#lvPlay');b.textContent=LS.on?'❚❚ Pause':LS.resume!=null?'▶ Resume':'▶ Listen';b.setAttribute('aria-label',LS.on?'Pause listening':'Listen');$('#lvStop').hidden=!(LS.on||LS.resume!=null)}
+function listenPause(){if(!LS.on)return;clearInterval(LS.est);if(SS&&SS.t0){SS.ms+=performance.now()-SS.t0;SS.t0=null}LS.on=false;LS.resume=LS.cur;LS.utt=null;clearTimeout(LS.timer);try{synth.cancel()}catch(x){}releaseWake();updListenUI()}
+function listenStop(){clearInterval(LS.est);LS.q=null;LS.qi=0;LS.stopAt=null;LS.onDone=null;LS.on=false;LS.resume=null;LS.utt=null;clearTimeout(LS.timer);try{synth&&synth.cancel()}catch(x){}clearSpeak();releaseWake();updListenUI()}
+function updListenUI(){const rg=$('#lvRange');if(rg){const on=(LS.on||LS.resume!=null)&&LS.stopAt!=null&&!LS.q;rg.hidden=!on;if(on)rg.textContent='Reading your selection only'}
+  const b=$('#lvPlay');b.textContent=LS.on?'❚❚ Pause':LS.resume!=null?'▶ Resume':'▶ Listen';b.setAttribute('aria-label',LS.on?'Pause listening':'Listen');$('#lvStop').hidden=!(LS.on||LS.resume!=null)}
 $('#lvPlay').onclick=()=>LS.on?listenPause():listenStart();
 $('#lvStop').onclick=()=>{if(SS&&SS.phase==='listen'){ssListenDone();return}listenStop()};
 $('#lvVoice').onchange=e=>{S.voice=e.target.value;persistProfile();if(LS.on)speakFrom(LS.cur)};
 $('#lvRate').onchange=e=>{S.lvRate=+e.target.value;persistProfile();if(LS.on)speakFrom(LS.cur)};
 $('#lvBreath').onchange=e=>{S.lvBreath=+e.target.value;persistProfile()};
 $('#lvAll').onchange=fillVoices;
+$('#hbListenSel').onclick=()=>{const r=pendingSel||(editingHl&&editingHl.s!=null?editingHl:null);if(!r)return;const s0=r.s,e0=Math.max(r.s+1,r.e);try{getSelection().removeAllRanges()}catch(x){}hideBar();listenStart(s0,{stopAt:e0,onDone:()=>toast('Finished your selection')})};
 $('#hbListen').onclick=()=>{const w=pendingSel?pendingSel.s:editingHl&&editingHl.s!=null?editingHl.s:null;if(w==null)return;try{getSelection().removeAllRanges()}catch(x){}hideBar();listenStart(w)};
+$('#study').addEventListener('dblclick',e=>{if(pen!==0)return;const sp=e.target.closest('span[data-i]');if(!sp)return;try{getSelection().removeAllRanges()}catch(x){}hideBar();listenStart(+sp.dataset.i)});
 $('#study').addEventListener('click',e=>{if(!LS.on||pen!==0)return;const sp=e.target.closest('span[data-i]');if(!sp)return;const sel=getSelection();if(sel&&!sel.isCollapsed)return;LS.q=null;speakFrom(+sp.dataset.i)});
 function syncListenUI(){$('#lvRate').value=String(S.lvRate||1);$('#lvBreath').value=String(S.lvBreath||1);fillVoices();updListenUI()}
 
@@ -2867,16 +2889,41 @@ function cleanSummary(r){
 }
 /* reading order for two-column pages: whole left column, then right column, with full-width lines (titles, abstracts) kept in place */
 function orderColumns(lines){
-  const live=lines.filter(l=>!l.drop&&l.text);if(live.length<8)return lines;
-  const minX=Math.min(...live.map(l=>l.x0)),maxX=Math.max(...live.map(l=>l.x1)),mid=(minX+maxX)/2,tol=(maxX-minX)*0.03;
-  const side=l=>l.x1<=mid+tol?'L':l.x0>=mid-tol?'R':'F';
-  const nL=live.filter(l=>side(l)==='L').length,nR=live.filter(l=>side(l)==='R').length;
-  if(nL<4||nR<4||(nL+nR)<live.length*0.5)return lines;
-  const sorted=lines.slice().sort((a,b)=>b.y-a.y||a.x0-b.x0);
-  const out=[];let L=[],Rr=[];
-  const flush=()=>{out.push(...L,...Rr);L=[];Rr=[]};
-  for(const l of sorted){const sd=l.drop||!l.text?(l.x1<=mid+tol?'L':l.x0>=mid-tol?'R':'F'):side(l);if(sd==='F'){flush();out.push(l)}else if(sd==='L')L.push(l);else Rr.push(l)}
-  flush();return out;
+  // Recursive XY-cut: split the page at clear horizontal bands and vertical gutters,
+  // so full-width parts, side panels and one- or two-column regions each read in order.
+  const live=lines.filter(l=>!l.drop&&l.text),rest=lines.filter(l=>l.drop||!l.text);
+  if(live.length<2)return lines;
+  const sz=live.map(l=>l.size).sort((a,b)=>a-b),med=sz[sz.length>>1]||10;
+  const rowSort=arr=>{
+    const a=arr.slice().sort((p,q)=>q.y-p.y),rows=[];
+    for(const l of a){const r=rows[rows.length-1];if(r&&Math.abs(r.y-l.y)<0.45*Math.min(r.size,l.size))r.items.push(l);else rows.push({y:l.y,size:l.size,items:[l]})}
+    return rows.flatMap(r=>r.items.sort((p,q)=>p.x0-q.x0));
+  };
+  const gaps=(iv,minGap)=>{iv.sort((p,q)=>p[0]-q[0]);const out=[];let end=iv[0][1];for(let k=1;k<iv.length;k++){if(iv[k][0]-end>=minGap)out.push((end+iv[k][0])/2);end=Math.max(end,iv[k][1])}return out};
+  const cut=(arr,depth)=>{
+    if(arr.length<2||depth>12)return rowSort(arr);
+    // vertical gutter that runs through the whole block
+    const vg=gaps(arr.map(l=>[l.x0,l.x1]),Math.max(4,med*0.75));
+    if(vg.length){
+      const parts=[];let left=arr;
+      for(const x of vg){parts.push(left.filter(l=>l.x1<=x));left=left.filter(l=>l.x0>=x)}
+      parts.push(left);
+      const real=parts.filter(p=>p.length);
+      const lineish=real.filter(p=>p.length>=2).length;
+      if(real.length>1&&lineish>=2)return real.flatMap(p=>cut(p,depth+1));
+    }
+    // horizontal band that crosses the whole block
+    const hg=gaps(arr.map(l=>[-(l.y+l.size*0.9),-(l.y-l.size*0.3)]),med*0.6);
+    if(hg.length){
+      const parts=[];let rest2=arr;
+      for(const ny of hg){const y=-ny;parts.push(rest2.filter(l=>l.y>y));rest2=rest2.filter(l=>l.y<=y)}
+      parts.push(rest2);
+      const real=parts.filter(p=>p.length);
+      if(real.length>1)return real.flatMap(p=>cut(p,depth+1));
+    }
+    return rowSort(arr);
+  };
+  return rest.concat(cut(live,0));
 }
 async function readPdf(file,opts){
   await needLib('pdf');
