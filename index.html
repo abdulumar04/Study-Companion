@@ -360,6 +360,27 @@ svg.ink{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;ove
 .gbody details{border:1px solid var(--rule);border-radius:10px;padding:10px 14px;background:var(--surface);margin-bottom:8px}
 .gbody details summary{cursor:pointer;font-weight:600}
 .gbody details p{margin:8px 0 0;color:var(--ink-2)}
+.drillbar{padding:12px 14px;background:var(--accent-soft);display:flex;flex-direction:column;gap:8px;font-size:14px}
+.drillbar .dh{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 14px;align-items:baseline}
+.drillbar b{font-weight:600}
+.drillbar .big2{font:500 22px var(--mono);font-variant-numeric:tabular-nums}
+.drillbar .meter{height:6px;background:var(--surface);border-radius:3px;overflow:hidden}
+.drillbar .meter i{display:block;height:100%;background:var(--accent)}
+.drillbar table{font-size:13px;background:var(--surface);border-radius:8px}
+.drillbar .tw{overflow-x:auto}
+.listenbar{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--rule);background:var(--surface)}
+.listenbar .lsel{flex:1 1 220px;min-width:0;max-width:340px;padding:5px 8px}
+.listenbar .lsel2{width:auto;padding:5px 8px}
+.listenbar .lall{font-size:12.5px;color:var(--ink-3)}
+.listenbar .hint{flex-basis:100%}
+.listenbar .hint:empty{display:none}
+.study span.speak-s{box-shadow:inset 0 -2px 0 color-mix(in srgb,var(--accent) 45%,transparent)}
+.study span.speak{background:color-mix(in srgb,var(--accent) 28%,transparent)!important;border-radius:3px}
+.tl span.speak{background:color-mix(in srgb,var(--accent) 35%,transparent)!important}
+.study.veiled{filter:blur(7px);pointer-events:none;user-select:none}
+.drillbar ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:3px}
+.drillbar textarea{min-height:120px;background:var(--surface)}
+.drillbar .txt{background:var(--surface)}
 .backup{border-top:1px solid var(--rule);margin-top:16px;padding-top:14px;display:flex;flex-direction:column;gap:8px}
 .backup h2{margin:0}
 footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-size:12.5px;color:var(--ink-3);max-width:80ch}
@@ -391,6 +412,16 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
     <div>
       <div class="stage">
         <div class="study-only">
+          <div class="drillbar" id="ssBar" hidden></div>
+          <div class="listenbar" id="listenBar">
+            <button class="btn primary small lplay" id="lvPlay" aria-label="Listen">▶ Listen</button>
+            <button class="btn small" id="lvStop" aria-label="Stop listening" hidden>■ Stop</button>
+            <select id="lvVoice" class="txt lsel" aria-label="Voice"></select>
+            <select id="lvRate" class="txt lsel2" aria-label="Reading speed"><option value="0.8">0.8×</option><option value="0.9">0.9×</option><option value="1">1×</option><option value="1.1">1.1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="1.75">1.75×</option><option value="2">2×</option></select>
+            <select id="lvBreath" class="txt lsel2" aria-label="Pauses"><option value="1">Natural pauses</option><option value="1.8">Longer pauses</option><option value="0.5">Short pauses</option></select>
+            <label class="check lall"><input type="checkbox" id="lvAll"><span>All voices</span></label>
+            <span class="hint" id="lvHint"></span>
+          </div>
           <div class="pens" id="pens" role="group" aria-label="Highlighter pens">
             <span class="penlab">Pens</span>
             <button data-pen="0" title="No pen: select text to choose a colour">Select</button>
@@ -420,6 +451,7 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
           </div>
         </div>
         <div class="train-only">
+        <div class="drillbar" id="drillBar" hidden></div>
         <div class="lessonbar" id="lessonbar" hidden></div>
         <div class="rsvp" id="rsvp"></div>
         <div class="page" id="page" hidden></div>
@@ -437,11 +469,17 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
       <div class="row-gap train-only" style="margin-top:14px"><button class="btn primary" id="toCheck">Finish session and check comprehension</button><span class="hint" id="sessInfo"></span></div>
     </div>
     <aside class="rail">
+      <div class="panel study-only" id="ssPanel">
+        <h2>Study session</h2>
+        <p class="hint" style="margin-bottom:10px">Preview, listen and read along, recall from memory, check your understanding, then review on a schedule.</p>
+        <select id="ssLen" class="txt" aria-label="Session length"><option value="10">10 minutes</option><option value="15" selected>15 minutes</option><option value="20">20 minutes</option></select>
+        <button class="btn primary small" id="ssGo" style="margin-top:10px">Start study session</button>
+      </div>
       <div class="panel study-only">
         <h2>Highlights</h2>
         <div class="seg" id="hlFilter" role="group" aria-label="Filter by colour"><button data-c="0">All</button><button data-c="1" aria-label="Yellow"><span class="sw h1"></span></button><button data-c="2" aria-label="Green"><span class="sw h2"></span></button><button data-c="3" aria-label="Blue"><span class="sw h3"></span></button><button data-c="4" aria-label="Pink"><span class="sw h4"></span></button></div>
         <ul class="hllist" id="hlList"></ul>
-        <div class="row-gap"><button class="btn small" id="hlCopy">Copy all highlights</button><span class="hint" id="hlCount"></span></div>
+        <div class="row-gap"><button class="btn small" id="hlListen">▶ Listen to highlights</button><button class="btn small" id="hlCopy">Copy all highlights</button><span class="hint" id="hlCount"></span></div>
         <textarea id="hlExport" hidden aria-label="Highlights text" style="margin-top:10px"></textarea>
       </div>
       <div class="panel study-only">
@@ -488,6 +526,13 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
         </div>
       </div>
       <div class="panel train-only">
+        <h2>Ladder drill</h2>
+        <p class="hint" style="margin-bottom:10px">Read the same passage in less time each round, then test your speed on new text.</p>
+        <select id="drillPlan" class="txt" aria-label="Drill length"><option value="std">5 · 4 · 3 · 2 minutes (about 17 min)</option><option value="short">3 · 2 · 1 minutes (about 8 min)</option></select>
+        <label class="check" style="margin-top:8px"><input type="checkbox" id="drillT" checked><span>Finish on new text with a comprehension check (recommended)</span></label>
+        <button class="btn primary small" id="drillGo" style="margin-top:10px">Set up ladder drill</button>
+      </div>
+      <div class="panel train-only">
         <h2>Keys</h2>
         <dl class="keys">
           <dt>Space</dt><dd>Play or pause</dd>
@@ -500,7 +545,7 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
   </div>
   <div id="hlbar" role="toolbar" aria-label="Highlight" hidden>
     <button class="sw h1" data-c="1" aria-label="Highlight yellow"></button><button class="sw h2" data-c="2" aria-label="Highlight green"></button><button class="sw h3" data-c="3" aria-label="Highlight blue"></button><button class="sw h4" data-c="4" aria-label="Highlight pink"></button>
-    <button class="btn small" id="hbTrain">Train from here</button><button class="btn small" id="hbNote">Note</button><button class="btn small danger" id="hbDel" hidden>Remove</button>
+    <button class="btn small" id="hbListen">▶ Listen from here</button><button class="btn small" id="hbTrain">Train from here</button><button class="btn small" id="hbNote">Note</button><button class="btn small danger" id="hbDel" hidden>Remove</button>
     <div id="hbNoteBox" hidden><input id="hbNoteIn" class="txt" placeholder="Add a note" aria-label="Highlight note"><button class="btn small primary" id="hbNoteSave">Save</button></div>
   </div>
 </section>
@@ -578,6 +623,8 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
       <button data-g="g-screens">The five screens</button>
       <button data-g="g-add">Adding materials</button>
       <button data-g="g-study">Study mode</button>
+      <button data-g="g-session">Study session</button>
+      <button data-g="g-listen">Listen (read aloud)</button>
       <button data-g="g-pens">Pens and highlighters</button>
       <button data-g="g-scan">Scanned documents</button>
       <button data-g="g-train">Speed and comprehension course</button>
@@ -639,6 +686,28 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
       </ul>
     </section>
 
+    <section id="g-session">
+      <h3>Study session (the best way to learn a reading)</h3>
+      <ol class="steps">
+        <li><b>Start:</b> in Study mode, go to where you want to begin, choose 10, 15 or 20 minutes in <b>Study session</b>, and press <b>Start study session</b>.</li>
+        <li><b>Preview:</b> skim the headings and opening lines shown, and note what you want to find out.</li>
+        <li><b>Listen and read along:</b> the voice reads while you follow the highlight and mark key points. It stops by itself at the end of the section.</li>
+        <li><b>Recall without looking:</b> the text is hidden while you write the main argument, one piece of evidence and one open question. This is saved to <b>My notes</b>.</li>
+        <li><b>Check:</b> answer the comprehension questions. Leave review reminders ticked to get three reminders in your calendar (tomorrow, 3 days, a week).</li>
+        <li><b>Review:</b> when a reminder comes up, open the material, press <b>▶ Listen to highlights</b> to hear only what you marked, and recall the argument again.</li>
+      </ol>
+      <p class="hint">Why this works: previewing gives your mind a structure, recalling from memory and spacing reviews over days are the two habits with the strongest evidence for lasting learning.</p>
+    </section>
+    <section id="g-listen">
+      <h3>Listen (read aloud)</h3>
+      <ul>
+        <li>In Study mode press <b>▶ Listen</b>. The reading is spoken sentence by sentence, with the current word highlighted and the page turning by itself. Press <b>❚❚ Pause</b> to stop and <b>▶ Resume</b> to carry on from the same word.</li>
+        <li><b>Start anywhere:</b> select some words and choose <b>Listen from here</b>, or while it is reading, click any word to jump there.</li>
+        <li><b>Voice:</b> the most natural voice on your device is chosen automatically and marked ★; robotic voices are hidden (tick <b>All voices</b> to see them). <b>Speed</b> runs from 0.8× to 2×. <b>Pauses</b> sets how long it breathes at full stops and paragraph ends.</li>
+        <li><b>Best voices by device:</b> Windows and Surface: open the app in <b>Microsoft Edge</b> for Microsoft's Natural voices (they need an internet connection). iPhone and iPad: download a Premium or Enhanced voice in Settings → Accessibility → Spoken Content → Voices. Android: Chrome's Google voices; more can be added in Settings → Text-to-speech.</li>
+        <li>You can keep highlighting and taking notes while it reads.</li>
+      </ul>
+    </section>
     <section id="g-pens">
       <h3>Pens and highlighters</h3>
       <p>The pen tray sits above the page. Pick a tool, use it, and press <b>Select</b> when you want to read without marking.</p>
@@ -674,6 +743,7 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
         <li><b>Report card.</b> A level passes at 80% comprehension on at least 300 words at the target speed.</li>
         <li><b>Retest every two weeks</b> on the Course screen. A fresh passage you have never seen is the true measure of progress.</li>
       </ol>
+      <p><b>Ladder drill.</b> In Train mode, choose <b>Set up ladder drill</b>. You read the same passage for 5, then 4, 3 and 2 minutes (or 3, 2, 1). Round 1 is at your comfortable pace; each later round sets the speed so the same words fit the shorter time. Then you read 3 minutes of new text at 15% above your round 1 pace and take the comprehension check. Rereading gets easier partly because the words are familiar, so judge your progress by the new-text step and its score. Results are saved under <b>Progress → Ladder drills</b>.</p>
       <p class="hint">Controls in Train mode: speed (100 to 1,000 words per minute), words per chunk (1 to 10), display (clean text, printed page, focus point), pauses at punctuation, warm-up and sprint drills. Keys: Space play/pause, ← → previous/next sentence, ↑ ↓ speed, [ ] chunk size.</p>
     </section>
 
@@ -739,6 +809,7 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
         <div id="chart"></div>
       </div>
       <div class="tbl" id="testsTbl"></div>
+      <div class="tbl" id="drillTbl"></div>
       <div class="tbl" id="table"></div>
       <div class="row-gap" style="margin-top:12px" id="clearRow"><button class="btn small danger" id="clearBtn">Clear training history</button></div>
     </div>
@@ -865,9 +936,10 @@ const LEVELS=[
 ];
 
 /* ================= state ================= */
-const DEF_S={pdfScroll:true,inkW:3,wpm:250,chunk:2,mode:'page',rsvpSize:44,pageSize:19,pause:1,ramp:true,orp:true,sprint:false,rm:'study',studySize:18,studyPdf:true};
+const DEF_S={voice:'',lvRate:1,lvBreath:1,pdfScroll:true,inkW:3,wpm:250,chunk:2,mode:'page',rsvpSize:44,pageSize:19,pause:1,ramp:true,orp:true,sprint:false,rm:'study',studySize:18,studyPdf:true};
 let P=store.get('rl2.profile',null)||{v:2,updated:0,folders:[],docs:[],last:'sample',level:1,lesson:false,samplePos:0,curFolder:'all',baseline:null};
 let LOG=store.get('rl2.log',null)||{sessions:[],tests:[]};
+if(!LOG.drills)LOG.drills=[];
 const S=Object.assign({},DEF_S,P.settings||{});P.settings=S;
 const DEF_IO={hf:true,notes:true,refs:true,tables:true,speaker:true};
 P.importOpts=Object.assign({},DEF_IO,P.importOpts||{});
@@ -882,13 +954,23 @@ if(!P.updated&&store.get('rl.docs',null)){
 }
 
 /* ================= cloud ================= */
-const Cloud={col:null,chain:Promise.resolve(),timer:null,
-  set(id,data){if(!this.col)return Promise.resolve();setSync('saving');this.chain=this.chain.then(()=>this.col.doc(id).set(data)).then(()=>setSync('ok'),e=>{setSync('error');console.warn(e)});return this.chain},
+const Cloud={col:null,chain:Promise.resolve(),timer:null,pend:{},rt:null,
+  set(id,data){if(!this.col)return Promise.resolve();setSync('saving');this.chain=this.chain.then(()=>this.col.doc(id).set(data)).then(()=>{delete this.pend[id];setSync(Object.keys(this.pend).length?'error':'ok')},e=>{this.pend[id]=data;setSync('error');this.retry();console.warn(e)});return this.chain},
+  retry(){if(this.rt)return;this.rt=setTimeout(()=>{this.rt=null;const p=this.pend;for(const k in p)this.set(k,p[k])},20000)},
   del(id){if(!this.col)return;this.chain=this.chain.then(()=>this.col.doc(id).delete()).catch(()=>{})}
 };
 function setSync(s){
   const el=$('#sync');el.className='sync '+(s==='saving'?'':s);
   el.textContent={ok:'Saved',saving:'Saving…',error:'Not saved',local:'Saved on this device'}[s]||s;
+  if(s==='nosign'){el.className='sync local';el.textContent='Not signed in: saved in this browser only'}
+  else if(s==='offline'){el.className='sync error';el.textContent='Connecting to your account… (tap to retry)'}
+  syncState=s;
+}
+let syncState='',cloudTries=0;
+function syncHelp(){
+  if(syncState==='nosign')toast('Open this page from claude.ai or the Claude app while signed in. Until then your work stays in this browser; it joins your account automatically the next time you open it signed in.');
+  else if(syncState==='offline'){toast('Trying to reach your account again…');cloudTries=0;initCloud()}
+  else if(syncState==='error')toast('Some changes have not reached your account yet. They are safe in this browser and will be sent automatically.');
 }
 function persistProfile(now){
   P.updated=Date.now();if(!store.set('rl2.profile',P))storageFull();
@@ -915,15 +997,17 @@ async function fetchText(meta){
   mem[meta.id]=t;meta.idbText=true;IDB.put('text:'+meta.id,t);
   return t;
 }
-async function initCloud(){try{await initCloud0()}finally{setTimeout(recoverOrphans,600)}}
+async function initCloud(){try{await initCloud0()}finally{if(!initCloud.done){initCloud.done=true;setTimeout(recoverOrphans,600)}}}
 async function initCloud0(){
-  if(!window.claude||typeof claude.use!=='function'){setSync('local');return}
+  if(!$('#sync').onclick){$('#sync').onclick=syncHelp;$('#sync').setAttribute('role','button');$('#sync').tabIndex=0}
+  if(!window.claude||typeof claude.use!=='function'){setSync('nosign');return}
   try{
     const [user,db]=await Promise.all([claude.use('user'),claude.use('db')]);
-    if(!user||!db){setSync('local');return}
-    const uid=await user.id();if(!uid){setSync('local');return}
+    if(!user||!db){setSync('nosign');return}
+    const uid=await user.id();if(!uid){setSync('nosign');return}
     const col=db.collection('data/users/'+uid);
-    const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),10000));
+    setSync('offline');
+    const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),25000));
     const [ps,ls]=await Promise.race([Promise.all([col.doc('profile').get(),col.doc('log').get()]),timeout]);
     Cloud.col=col;
     if(ps.exists){
@@ -950,7 +1034,7 @@ async function initCloud0(){
     syncUI();
     if(!doc||(doc.id!==P.last))openDoc(P.last||'sample',true);
     refreshView();
-  }catch(e){setSync('local');console.warn(e)}
+  }catch(e){console.warn(e);setSync('offline');if(++cloudTries<6)setTimeout(()=>{if(syncState==='offline')initCloud()},20000*cloudTries)}
 }
 
 /* ================= reading engine ================= */
@@ -1062,7 +1146,7 @@ let rsT=null;
 let lastW=window.innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsT);rsT=setTimeout(()=>{if(window.innerWidth===lastW)return;lastW=window.innerWidth;if(view==='read'){origPage=-1;studyKey='';render()}},250)});
 async function openDoc(id,quiet){
-  pause();
+  pause();if(drill)drillStop(true);if(SS)ssCancel();if(LS.on||LS.resume!=null)listenStop();
   const meta=allDocs().find(d=>d.id===id)||SAMPLE;
   if(meta.kind==='scan')return openScan(meta);
   const text=await getText(meta);
@@ -1089,13 +1173,13 @@ function baseMs(){
   return 60000/w;
 }
 function dur(k){const b=baseMs(),s=chunks[k],e=chunkEnd(k);let t=0;for(let i=s;i<e;i++){t+=b;if(W[i].length>8)t+=b*0.3}const l=E[e-1];return t+b*S.pause*(l===3?2.5:l===2?1.6:l===1?0.6:0)}
-function step(){render();timer=setTimeout(()=>{sess.words+=chunkEnd(ci)-chunks[ci];if(ci>=chunks.length-1){pause();toast('End of reading. Take the check while it is fresh.');return}ci++;if(ci%25===0)savePos();step()},dur(ci))}
+function step(){render();timer=setTimeout(()=>{sess.words+=chunkEnd(ci)-chunks[ci];if(drill&&drill.ms&&playedMs()>=drill.ms){drillEnd();return}if(ci>=chunks.length-1){if(drill&&drill.ms){drillEnd();return}pause();toast('End of reading. Take the check while it is fresh.');return}ci++;if(ci%25===0)savePos();step()},dur(ci))}
 function fmtDur(ms){const t=Math.max(0,Math.round((ms||0)/1000)),h=Math.floor(t/3600),m=Math.floor(t%3600/60),x=t%60,p=n=>String(n).padStart(2,'0');return h?`${h}:${p(m)}:${p(x)}`:`${m}:${p(x)}`}
 let clockT=null;
-function updSessInfo(){const el=$('#sessInfo');if(!el)return;const ms=sess.ms+(playing?performance.now()-playT0:0);el.textContent=(sess.words||ms>=1000)?`${fmt(sess.words)} words · ${fmtDur(ms)} reading time${playing?'':' (paused)'}`:''}
+function updSessInfo(){if(drill&&drill.ms)drillLive();const el=$('#sessInfo');if(!el)return;const ms=sess.ms+(playing?performance.now()-playT0:0);el.textContent=(sess.words||ms>=1000)?`${fmt(sess.words)} words · ${fmtDur(ms)} reading time${playing?'':' (paused)'}`:''}
 function play(){if(!doc||playing||!W.length)return;if(ci>=chunks.length-1&&chunks.length>1){ci=0;sess={start:null,words:0,ms:0}}if(sess.start==null)sess.start=chunks[ci];playing=true;playT0=rampT0=performance.now();lockWake();updPlay();clearInterval(clockT);clockT=setInterval(updSessInfo,1000);step()}
 function pause(){if(!playing)return;playing=false;clearTimeout(timer);clearInterval(clockT);sess.ms+=performance.now()-playT0;savePos();releaseWake();updPlay();render()}
-const toggle=()=>playing?pause():play();
+const toggle=()=>{if(!playing&&drill&&(drill.phase==='ready'||drill.phase==='tready')){drillStart();return}playing?pause():play()};
 function seekWord(w){if(!W.length)return;w=Math.max(0,Math.min(W.length-1,w));if(playing){clearTimeout(timer);ci=chunkAt(w);rampT0=performance.now();step()}else{ci=chunkAt(w);render()}savePos()}
 function prevSentence(){let k=chunks[ci]-2;while(k>=0&&E[k]<2)k--;seekWord(k+1)}
 function nextSentence(){let k=chunks[ci];while(k<W.length-1&&E[k]<2)k++;seekWord(k+1)}
@@ -1250,6 +1334,7 @@ $('#spView').onclick=()=>{S.studyPdf=!S.studyPdf;studyKey='';persistProfile();re
 $('#spSmaller').onclick=()=>{S.studySize=Math.max(13,S.studySize-1);studyKey='';persistProfile();render()};
 $('#spBigger').onclick=()=>{S.studySize=Math.min(30,S.studySize+1);studyKey='';persistProfile();render()};
 function setRm(m){
+  if(m==='train'&&(LS.on||LS.resume!=null))listenStop();
   if(m==='train'&&doc&&doc.kind==='scan'){toast('Scanned pages can be read in Study mode. See Guide → Scanned documents to turn a scan into text for training.');m='study'}
   pause();S.rm=m;persistProfile();curPage=-1;origPage=-1;studyKey='';hideBar();
   $$('#rmSeg button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.rm===m)));
@@ -1311,7 +1396,7 @@ let selT=null,pendingSel=null,editingHl=null;
 const bar=$('#hlbar');
 function hideBar(){bar.hidden=true;$('#hbNoteBox').hidden=true;pendingSel=null;editingHl=null}
 function showBar(rect,edit){
-  bar.hidden=false;$('#hbDel').hidden=!edit;$('#hbTrain').hidden=!!(doc&&doc.kind==='scan');$('#hbNoteBox').hidden=true;
+  bar.hidden=false;$('#hbDel').hidden=!edit;$('#hbTrain').hidden=!!(doc&&doc.kind==='scan');$('#hbListen').hidden=!!(doc&&doc.kind==='scan');$('#hbNoteBox').hidden=true;
   const bw=bar.offsetWidth,bh=bar.offsetHeight;
   let left=rect.left+rect.width/2-bw/2;left=Math.max(12,Math.min(window.innerWidth-bw-12,left));
   let top=rect.top-bh-10;if(top<12)top=rect.bottom+10;
@@ -2108,6 +2193,256 @@ function bindForm(){
   const d=$('#evDel');if(d)d.onclick=()=>{if(d.dataset.armed!=='1'){d.dataset.armed='1';d.textContent='Confirm delete';return}CAL.events=CAL.events.filter(x=>x!==calEdit);calEdit=null;saveCal();renderCalendar()};
 }
 
+/* ================= listen (read aloud) ================= */
+const synth=('speechSynthesis' in window)?window.speechSynthesis:null;
+const LS={on:false,resume:null,cur:null,utt:null,timer:null,marks:[],q:null,qi:0,stopAt:null,onDone:null};
+function allVoices(){try{return synth?synth.getVoices():[]}catch(e){return []}}
+function voiceScore(v){const n=v.name||'';let s=0;if(/natural/i.test(n))s+=100;if(/premium|enhanced|siri/i.test(n))s+=80;if(/^Google/.test(n))s+=50;if(v.localService===false)s+=5;if(/^en/i.test(v.lang))s+=20;if(/en[-_](NG|GB)/i.test(v.lang))s+=3;if(/compact|espeak|robot|novelty|zarvox|bad news|bells|whisper|cellos/i.test(n))s-=200;return s}
+function rankedVoices(){return allVoices().filter(v=>/^en/i.test(v.lang)).sort((a,b)=>voiceScore(b)-voiceScore(a)||a.name.localeCompare(b.name))}
+function pickVoice(){const vs=allVoices();if(!vs.length)return null;return (S.voice&&vs.find(v=>v.name===S.voice))||rankedVoices()[0]||vs[0]}
+function voiceLabel(v){return v.name.replace(/^Microsoft /,'').replace(/ Online \(Natural\)/,' · Natural').replace(/ - English/,' ·').replace(/\s+/g,' ')}
+function fillVoices(){
+  const sel=$('#lvVoice');if(!sel)return;
+  if(!synth){sel.innerHTML='<option>Read aloud is not supported here</option>';sel.disabled=true;$('#lvPlay').disabled=true;return}
+  const ranked=rankedVoices(),good=ranked.filter(v=>voiceScore(v)>=50);
+  const list=$('#lvAll').checked||!good.length?ranked:good,cur=pickVoice();
+  sel.innerHTML=list.map(v=>`<option value="${esc(v.name)}"${cur&&v.name===cur.name?' selected':''}>${esc(voiceLabel(v))}${voiceScore(v)>=80?' ★':''}</option>`).join('')||'<option>Loading voices…</option>';
+  const best=ranked[0]?voiceScore(ranked[0]):0;
+  $('#lvHint').textContent=!ranked.length?'':best>=80?'':'Only basic voices on this device. For human-sounding voices: on Windows open this page in Microsoft Edge; on iPhone or iPad download a Premium voice in Settings → Accessibility → Spoken Content → Voices; on Android add voices in Settings → Text-to-speech.';
+}
+if(synth)synth.addEventListener('voiceschanged',fillVoices);
+function clearSpeak(){LS.marks.forEach(el=>el.classList.remove('speak','speak-s'));LS.marks=[]}
+function spanOf(i){return $(`#study span[data-i="${i}"]`)}
+function ensureShown(i){
+  if(view!=='read'||S.rm!=='study')return;
+  if(scrollActive()){
+    const el=spanOf(i);
+    if(!el){const p=search(doc.pdfPages,i);if(p!==scrollState.cur)scrollToPage(p,true);return}
+    const st=$('#study'),r=el.getBoundingClientRect(),R0=st.getBoundingClientRect();
+    if(r.top<R0.top+40||r.bottom>R0.bottom-60)st.scrollTo({top:st.scrollTop+(r.top-R0.top)-st.clientHeight*0.35,behavior:'smooth'});
+    return;
+  }
+  const a=studyStarts(),idx=search(a,i),cur=search(a,chunks[ci]||0);
+  if(idx!==cur){ci=chunkAt(a[idx]);savePos();render()}
+  const el=spanOf(i);if(el){const r=el.getBoundingClientRect();if(r.top<70||r.bottom>window.innerHeight-60)el.scrollIntoView({block:'center',behavior:'smooth'})}
+}
+function markSpeak(s,e,w){
+  clearSpeak();ensureShown(w!=null?w:s);
+  for(let i=s;i<e;i++){const el=spanOf(i);if(el){el.classList.add('speak-s');LS.marks.push(el)}}
+  if(w!=null){const el=spanOf(w);if(el){el.classList.add('speak');LS.marks.push(el)}}
+}
+function sentenceEnd(i){let e=i;while(e<W.length-1&&E[e]<2)e++;return e+1}
+function speakFrom(i){
+  if(!synth){toast('This browser cannot read aloud.');return}
+  try{synth.cancel()}catch(x){}
+  clearTimeout(LS.timer);
+  if(!doc||!W.length||i>=W.length){const fin=doc&&W.length&&i>=W.length;listenStop();if(fin)toast('Finished reading');return}
+  let e=sentenceEnd(i);if(LS.q&&LS.q[LS.qi])e=Math.min(e,LS.q[LS.qi][1]);if(LS.stopAt!=null)e=Math.min(e,LS.stopAt);if(e<=i)e=sentenceEnd(i);
+  const words=W.slice(i,e),offs=[];let c=0;for(const w of words){offs.push(c);c+=w.length+1}
+  const u=new SpeechSynthesisUtterance(words.join(' '));
+  const v=pickVoice();if(v){u.voice=v;u.lang=v.lang}
+  u.rate=+S.lvRate||1;u.pitch=1;
+  LS.on=true;LS.cur=i;LS.utt=u;
+  u.onstart=()=>{if(LS.utt===u)markSpeak(i,e,i)};
+  u.onboundary=ev=>{if(LS.utt!==u||(ev.name&&ev.name!=='word'))return;const k=Math.max(0,search(offs,ev.charIndex||0));LS.cur=i+k;markSpeak(i,e,i+k)};
+  u.onend=()=>{
+    if(LS.utt!==u||!LS.on)return;
+    const last=E[e-1],base=H[e-1]?650:last===3?520:last===2?160:last===1?60:0;
+    let next=e,extra=0;
+    if(LS.q){if(next>=LS.q[LS.qi][1]){LS.qi++;if(LS.qi>=LS.q.length){listenStop();toast('Finished your highlights');return}next=LS.q[LS.qi][0];extra=700}}
+    if(LS.stopAt!=null&&next>=LS.stopAt){const cb=LS.onDone;LS.cur=next;listenStop();if(cb)cb();return}
+    LS.cur=next;LS.timer=setTimeout(()=>{if(LS.on&&LS.utt===u)speakFrom(next)},base*(+S.lvBreath||1)/Math.max(.8,+S.lvRate||1)+extra);
+  };
+  u.onerror=ev=>{if(LS.utt!==u)return;if(ev.error==='interrupted'||ev.error==='canceled')return;listenStop();toast('Reading aloud stopped ('+(ev.error||'error')+'). Try another voice.')};
+  synth.speak(u);updListenUI();
+}
+function listenStart(from,opt){
+  if(opt){LS.q=opt.q||null;LS.qi=0;LS.stopAt=opt.stopAt!=null?opt.stopAt:null;LS.onDone=opt.onDone||null}
+  else if(from!=null){LS.q=null;LS.stopAt=null;LS.onDone=null}
+  if(SS&&SS.phase==='listen')SS.t0=performance.now();
+  if(!doc||doc.kind==='scan'){toast(doc&&doc.kind==='scan'?'Listen needs text. Turn the scan into text first (see Guide → Scanned documents).':'Open a reading first');return}
+  if(S.rm!=='study')setRm('study');
+  let i=from;
+  if(i==null)i=LS.resume!=null?LS.resume:(()=>{const a=studyStarts();return a[search(a,chunks[ci]||0)]})();
+  LS.resume=null;lockWake();speakFrom(i);
+}
+function listenPause(){if(!LS.on)return;if(SS&&SS.t0){SS.ms+=performance.now()-SS.t0;SS.t0=null}LS.on=false;LS.resume=LS.cur;LS.utt=null;clearTimeout(LS.timer);try{synth.cancel()}catch(x){}releaseWake();updListenUI()}
+function listenStop(){LS.q=null;LS.qi=0;LS.stopAt=null;LS.onDone=null;LS.on=false;LS.resume=null;LS.utt=null;clearTimeout(LS.timer);try{synth&&synth.cancel()}catch(x){}clearSpeak();releaseWake();updListenUI()}
+function updListenUI(){const b=$('#lvPlay');b.textContent=LS.on?'❚❚ Pause':LS.resume!=null?'▶ Resume':'▶ Listen';b.setAttribute('aria-label',LS.on?'Pause listening':'Listen');$('#lvStop').hidden=!(LS.on||LS.resume!=null)}
+$('#lvPlay').onclick=()=>LS.on?listenPause():listenStart();
+$('#lvStop').onclick=()=>{if(SS&&SS.phase==='listen'){ssListenDone();return}listenStop()};
+$('#lvVoice').onchange=e=>{S.voice=e.target.value;persistProfile();if(LS.on)speakFrom(LS.cur)};
+$('#lvRate').onchange=e=>{S.lvRate=+e.target.value;persistProfile();if(LS.on)speakFrom(LS.cur)};
+$('#lvBreath').onchange=e=>{S.lvBreath=+e.target.value;persistProfile()};
+$('#lvAll').onchange=fillVoices;
+$('#hbListen').onclick=()=>{const w=pendingSel?pendingSel.s:editingHl&&editingHl.s!=null?editingHl.s:null;if(w==null)return;try{getSelection().removeAllRanges()}catch(x){}hideBar();listenStart(w)};
+$('#study').addEventListener('click',e=>{if(!LS.on||pen!==0)return;const sp=e.target.closest('span[data-i]');if(!sp)return;const sel=getSelection();if(sel&&!sel.isCollapsed)return;LS.q=null;speakFrom(+sp.dataset.i)});
+function syncListenUI(){$('#lvRate').value=String(S.lvRate||1);$('#lvBreath').value=String(S.lvBreath||1);fillVoices();updListenUI()}
+
+/* ================= study session ================= */
+let SS=null,sessKind='read',ssTimer=null;
+function topicSentences(a,b,max){const out=[];let i=a;while(i<b&&out.length<max){if(!H[i]&&(i===0||E[i-1]===3)){const e=Math.min(sentenceEnd(i),b);let t=W.slice(i,e).join(' ');if(t.length>170)t=t.slice(0,167)+'…';out.push(t)}i++}return out}
+function ssStart(){
+  if(!doc||!W.length||doc.kind==='scan'){toast(doc&&doc.kind==='scan'?'A study session needs text. Turn the scan into text first (see Guide).':'Open a reading first');return}
+  if(drill)drillStop(true);
+  const a=studyStarts(),start=LS.resume!=null?LS.resume:a[search(a,chunks[ci]||0)];
+  listenStop();
+  const mins=+$('#ssLen').value||15,rate=+S.lvRate||1;
+  let end=Math.min(W.length,start+Math.round(mins*150*rate));
+  if(end<W.length)end=sentenceEnd(end);
+  if(end-start<120){toast('Not enough text left from here. Start nearer the beginning of the reading.');return}
+  const heads=[];for(let i=start;i<end;i++){if(H[i]){let j=i;while(j<end&&H[j])j++;heads.push(W.slice(i,j).join(' '));i=j}}
+  SS={phase:'preview',start,end,mins,heads,tops:topicSentences(start,end,6),ms:0,t0:null};
+  renderSS();$('#ssBar').scrollIntoView({block:'nearest',behavior:'smooth'});
+}
+function ssListen(){SS.q=($('#ssQ')||{}).value||'';SS.phase='listen';renderSS();listenStart(SS.start,{stopAt:SS.end,onDone:ssListenDone});clearInterval(ssTimer);ssTimer=setInterval(ssTick,1000)}
+function ssTick(){if(!SS||SS.phase!=='listen'){clearInterval(ssTimer);return}const el=$('#ssLive');if(!el)return;const ms=SS.ms+(SS.t0?performance.now()-SS.t0:0),cov=Math.max(0,(LS.cur!=null?LS.cur:SS.start)-SS.start),tot=SS.end-SS.start;el.innerHTML=`<div class="dh"><span class="big2">${fmtDur(ms)}</span><span>${fmt(cov)} of ${fmt(tot)} words${LS.on?'':' · paused'}</span></div><div class="meter"><i style="width:${Math.min(100,cov/tot*100)}%"></i></div>`}
+function ssListenDone(){
+  if(!SS)return;if(SS.t0){SS.ms+=performance.now()-SS.t0;SS.t0=null}
+  SS.reached=Math.max(SS.start+1,Math.min(SS.end,LS.cur!=null?LS.cur:SS.end));
+  clearInterval(ssTimer);listenStop();SS.phase='recall';$('#study').classList.add('veiled');renderSS();
+}
+function ssCancel(){clearInterval(ssTimer);if(SS&&SS.phase==='listen')listenStop();SS=null;$('#study').classList.remove('veiled');$('#ssBar').hidden=true}
+function ssFinish(){
+  const txt=$('#ssRecall').value.trim(),rev=$('#ssRev').checked;
+  const loc=locLabel(SS.start)+(locLabel(SS.start)!==locLabel(Math.max(SS.start,SS.reached-1))?' to '+locLabel(SS.reached-1).replace(/^\w+ /,''):'');
+  if(txt||SS.q){const ta=$('#noteText');ta.value=(ta.value?ta.value.trimEnd()+'\n\n':'')+`Recall, ${dShort(Date.now())}, ${loc}${SS.q?`\nMy question: ${SS.q}`:''}\n${txt}`;saveNote()}
+  if(rev){const t=new Date();[1,3,7].forEach((d,k)=>{const x=new Date(t);x.setDate(t.getDate()+d);CAL.events.push({id:'r'+Date.now().toString(36)+k,date:ymd(x),start:null,end:null,title:`Review: ${doc.name}`,type:'other',mode:'',notes:`Reread your highlights and recall notes for ${loc}, then recall the main argument again without looking.`})});saveCal()}
+  sess={start:SS.start,words:SS.reached-SS.start,ms:SS.ms};ci=chunkAt(Math.max(SS.start,SS.reached-1));sessKind='listen';
+  lastSS={wrote:!!txt,rev};SS=null;$('#study').classList.remove('veiled');$('#ssBar').hidden=true;
+  go('check');
+}
+let lastSS=null;
+function renderSS(){
+  const bar=$('#ssBar');if(!SS){bar.hidden=true;return}bar.hidden=false;
+  const words=SS.end-SS.start;
+  if(SS.phase==='preview'){
+    bar.innerHTML=`<div class="dh"><b>Step 1 of 4 · Preview</b><span class="hint">About ${fmt(words)} words, roughly ${SS.mins} minutes at ${S.lvRate||1}×</span></div>
+      ${SS.heads.length?`<div><b>Headings</b><ul>${SS.heads.slice(0,8).map(h=>`<li>${esc(h)}</li>`).join('')}</ul></div>`:''}
+      ${SS.tops.length?`<div><b>Opening lines</b><ul>${SS.tops.map(t=>`<li>${esc(t)}</li>`).join('')}</ul></div>`:''}
+      <label class="hint" for="ssQ">What do you want to find out from this part? (optional)</label><input id="ssQ" class="txt" placeholder="e.g. What does the author say causes the supply gap?">
+      <div class="row-gap"><button class="btn primary small" id="ssL">Start listening</button><button class="btn small" id="ssX">Cancel</button></div>`;
+  }else if(SS.phase==='listen'){
+    bar.innerHTML=`<div class="dh"><b>Step 2 of 4 · Listen and read along</b><span class="hint">Pick a highlighter and mark key points as you go.</span></div><div id="ssLive"></div>
+      <div class="row-gap"><button class="btn small" id="ssDone">Finish listening</button><button class="btn small" id="ssX">Cancel session</button></div>`;
+    ssTick();
+  }else if(SS.phase==='recall'){
+    bar.innerHTML=`<div class="dh"><b>Step 3 of 4 · Recall without looking</b><span class="hint">The text is hidden. Writing from memory is what fixes it in memory.</span></div>
+      ${SS.q?`<p style="margin:0">Your question: <i>${esc(SS.q)}</i></p>`:''}
+      <textarea id="ssRecall" placeholder="1. The main argument, in two or three sentences&#10;2. One piece of evidence the author uses&#10;3. One question you still have"></textarea>
+      <label class="check"><input type="checkbox" id="ssRev" checked><span>Add review reminders to my calendar: tomorrow, in 3 days and in a week</span></label>
+      <div class="row-gap"><button class="btn primary small" id="ssF">Save and check my understanding</button><button class="btn small" id="ssX">Cancel session</button></div>`;
+  }
+  const L=$('#ssL');if(L)L.onclick=ssListen;
+  const D=$('#ssDone');if(D)D.onclick=ssListenDone;
+  const F=$('#ssF');if(F)F.onclick=ssFinish;
+  const X=$('#ssX');if(X)X.onclick=ssCancel;
+}
+$('#ssGo').onclick=ssStart;
+$('#hlListen').onclick=()=>{
+  if(!doc||doc.kind==='scan'){toast('Listening to highlights works on text materials');return}
+  const r=HL.filter(h=>h.p==null).sort((a,b)=>a.s-b.s);if(!r.length){toast('No text highlights to listen to yet');return}
+  const m=[];for(const h of r){const l=m[m.length-1];if(l&&h.s<=l[1])l[1]=Math.max(l[1],h.e);else m.push([h.s,h.e])}
+  listenStart(m[0][0],{q:m});
+};
+
+/* ================= ladder drill ================= */
+const LADDERS={std:[5,4,3,2],short:[3,2,1]};
+let drill=null;
+const clampW=v=>Math.max(100,Math.min(1000,Math.round(v/5)*5));
+const snipAt=w=>W.slice(w,w+8).join(' ')+(W.length>w+8?'…':'');
+function drillSetup(){
+  if(!doc||!W.length){toast('Open a reading first');return}
+  if(drill)drillStop(true);
+  pause();const plan=LADDERS[$('#drillPlan').value]||LADDERS.std;
+  drill={plan,k:0,min:plan[0],transfer:$('#drillT').checked,res:[],phase:'ready',ms:0,far:0,saved:{wpm:S.wpm,ramp:S.ramp,sprint:S.sprint}};
+  S.ramp=false;S.sprint=false;syncUI();renderDrill();
+  $('#drillBar').scrollIntoView({block:'nearest',behavior:'smooth'});
+}
+function drillStart(){
+  const r=drill;if(!r)return;pause();
+  if(r.phase==='ready'){
+    if(r.k===0){r.start=chunks[ci];r.base=S.wpm}
+    ci=chunkAt(r.start);S.wpm=r.k===0?r.base:clampW(r.base*r.plan[0]/r.min);r.speed=S.wpm;r.phase='run';
+  }else if(r.phase==='tready'){
+    ci=chunkAt(Math.min(r.far,W.length-1));r.tStart=chunks[ci];S.wpm=r.speed;r.phase='transfer';
+  }else return;
+  syncUI();sess={start:null,words:0,ms:0};r.ms=r.min*60000;
+  renderDrill();play();
+}
+function drillEnd(){
+  const r=drill;if(!r)return;const reached=chunkEnd(ci);
+  if(r.phase==='run'&&r.k===0)r.base=S.wpm;
+  r.ms=0;pause();
+  if(r.phase==='run'){
+    const words=Math.max(0,reached-r.start);
+    r.res.push({min:r.min,set:S.wpm,words});r.far=Math.max(r.far,reached);
+    if(r.k===0)r.N=words;
+    r.k++;
+    if(r.k===1&&r.N<60){toast('Very few words were covered in round 1, so the drill was stopped. Try again from a longer passage.');drillStop(true);return}
+    if(r.k<r.plan.length){r.min=r.plan[r.k];r.phase='ready'}
+    else if(r.transfer&&r.far<W.length-50){r.min=r.plan[0]>=5?3:2;r.speed=clampW(r.base*1.15);r.phase='tready'}
+    else drillFinish();
+  }else if(r.phase==='transfer'){
+    r.tWords=Math.max(0,reached-r.tStart);drillFinish();
+  }
+  renderDrill();
+}
+function drillFinish(){
+  const r=drill;r.phase='done';
+  LOG.drills.push({date:Date.now(),doc:doc.name,base:r.base,N:r.N,rounds:r.res,transfer:r.tWords!=null?{set:r.speed,min:r.min,words:r.tWords}:null});
+  persistLog();
+  S.ramp=r.saved.ramp;S.sprint=r.saved.sprint;if(r.tWords==null)S.wpm=r.saved.wpm;syncUI();persistProfile();
+}
+function drillStop(silent){
+  if(!drill)return;const r=drill;r.ms=0;pause();
+  if(r.phase!=='done'){S.ramp=r.saved.ramp;S.sprint=r.saved.sprint;S.wpm=r.saved.wpm;syncUI();persistProfile()}
+  drill=null;$('#drillBar').hidden=true;if(!silent)toast('Ladder drill stopped');
+}
+function drillLive(){
+  const r=drill,el=$('#drillLive');if(!el||!r)return;
+  const left=Math.max(0,r.ms-playedMs());
+  const cov=r.phase==='transfer'?chunks[ci]-r.tStart:chunks[ci]-r.start;
+  const target=r.phase==='run'&&r.k>0?r.N:null;
+  el.innerHTML=`<div class="dh"><span class="big2">${fmtDur(left)}</span><span>${fmt(Math.max(0,cov))} words${target?` of ${fmt(target)} (${Math.round(Math.max(0,cov)/target*100)}%)`:''}${playing?'':' · paused, time stopped'}</span></div>${target?`<div class="meter"><i style="width:${Math.min(100,Math.max(0,cov)/target*100)}%"></i></div>`:''}`;
+}
+function drillTable(r){
+  const rows=r.res.map((x,i)=>`<tr><td>Round ${i+1}</td><td class="n">${x.min}:00</td><td class="n">${x.set}</td><td class="n">${fmt(x.words)}</td><td class="n">${i?Math.round(x.words/r.N*100)+'%':'—'}</td></tr>`).join('');
+  const t=r.tWords!=null?`<tr><td>New text</td><td class="n">${r.min}:00</td><td class="n">${r.speed}</td><td class="n">${fmt(r.tWords)}</td><td class="n">—</td></tr>`:'';
+  return `<div class="tw"><table><thead><tr><th>Round</th><th class="n">Time</th><th class="n">Set wpm</th><th class="n">Words</th><th class="n">vs round 1</th></tr></thead><tbody>${rows}${t}</tbody></table></div>`;
+}
+function renderDrill(){
+  const r=drill,bar=$('#drillBar');if(!r){bar.hidden=true;return}
+  bar.hidden=false;const n=r.plan.length+(r.transfer?1:0);
+  if(r.phase==='ready'){
+    const sp=r.k===0?S.wpm:clampW(r.base*r.plan[0]/r.min),capped=r.k>0&&r.base*r.plan[0]/r.min>1000;
+    bar.innerHTML=`<div class="dh"><b>Ladder drill · round ${r.k+1} of ${n} · ${r.min} minute${r.min>1?'s':''}</b><span class="hint">Only reading time counts; pausing stops the clock.</span></div>
+      <p style="margin:0">${r.k===0?`Read at a comfortable pace you can follow (now ${sp} wpm; adjust with the speed control first). Starting at: “${esc(snipAt(chunks[ci]))}” Click any word on the page to start somewhere else.`
+        :`Same passage again, from the same start. Speed set to <b>${sp} wpm</b> so the ${fmt(r.N)} words you read in round 1 fit in ${r.min} minute${r.min>1?'s':''}.${capped?' This is the app’s top speed, so you may not finish the passage.':''} Keep your eyes moving; do not go back.`}</p>
+      ${r.res.length?drillTable(r):''}
+      <div class="row-gap"><button class="btn primary small" id="drGo">Start round ${r.k+1}</button><button class="btn small" id="drStop">Stop drill</button></div>`;
+  }else if(r.phase==='run'||r.phase==='transfer'){
+    bar.innerHTML=`<div class="dh"><b>${r.phase==='transfer'?'New text':'Round '+(r.k+1)} · ${r.min} min at ${S.wpm} wpm</b><button class="btn small" id="drStop">Stop drill</button></div><div id="drillLive"></div>`;
+    drillLive();
+  }else if(r.phase==='tready'){
+    bar.innerHTML=`<div class="dh"><b>Last step · new text · ${r.min} minutes</b></div>
+      <p style="margin:0">Now read text you have not seen, continuing after the drill passage, at <b>${r.speed} wpm</b> (15% above your round 1 pace). This shows whether the drill raised your real reading speed. A comprehension check follows.</p>
+      ${drillTable(r)}
+      <div class="row-gap"><button class="btn primary small" id="drGo">Start new text</button><button class="btn small" id="drStop">Stop drill</button></div>`;
+  }else if(r.phase==='done'){
+    const last=r.res[r.res.length-1],kept=last?Math.round(last.words/r.N*100):0;
+    bar.innerHTML=`<div class="dh"><b>Ladder drill complete</b></div>
+      ${drillTable(r)}
+      <p style="margin:0">In the last round you covered ${kept}% of the round 1 passage in ${last.min} minute${last.min>1?'s':''}. ${r.tWords!=null?'Now check how much of the new text you understood:':'Rereading gets easier partly because the words are familiar; the new-text step tells you more.'}</p>
+      <div class="row-gap">${r.tWords!=null?'<button class="btn primary small" id="drCheck">Check comprehension now</button>':''}<button class="btn small" id="drClose">Close</button></div>`;
+  }
+  const g=$('#drGo');if(g)g.onclick=drillStart;
+  const st=$('#drStop');if(st)st.onclick=()=>drillStop(false);
+  const c=$('#drCheck');if(c)c.onclick=()=>{drill=null;$('#drillBar').hidden=true;go('check')};
+  const cl=$('#drClose');if(cl)cl.onclick=()=>{drill=null;$('#drillBar').hidden=true};
+}
+$('#drillGo').onclick=drillSetup;
+
 /* ================= settings ================= */
 function lessonTarget(lv){const b=P.baseline?P.baseline.wpm:250;return Math.min(1000,Math.round(b*LEVELS[lv-1].f/5)*5)}
 function onLesson(){if(!P.lesson||!P.baseline)return false;const L=LEVELS[P.level-1];return S.wpm>=lessonTarget(P.level)-5&&S.chunk===L.c}
@@ -2200,7 +2535,7 @@ $('nav.tabs').addEventListener('click',e=>{const b=e.target.closest('button');if
 $('.gtoc nav').addEventListener('click',e=>{const b=e.target.closest('button[data-g]');if(b)document.getElementById(b.dataset.g).scrollIntoView({behavior:'smooth',block:'start'})});
 
 /* ================= metrics ================= */
-const checked=()=>LOG.sessions.filter(x=>x.acc!=null);
+const checked=()=>LOG.sessions.filter(x=>x.acc!=null&&x.kind!=='listen');
 function streak(){
   const days=new Set([...LOG.sessions,...LOG.tests].map(x=>dayKey(x.date)));
   let n=0;const d=new Date();
@@ -2817,9 +3152,10 @@ function scoreQuiz(){
   let right=0;
   quiz.forEach((q,i)=>{const fs=$('#q'+i),pk=fs.querySelector('input:checked'),ok=pk&&pk.value===q.ans;if(ok)right++;fs.classList.add(ok?'right':'wrong');const v=fs.querySelector('.verdict');v.hidden=false;v.textContent=(ok?'Correct.':(quizKind==='ai'?`The answer was “${q.ans}”.`:`The word was “${q.ans}”.`))+(q.why?' '+q.why:'');fs.querySelectorAll('input').forEach(x=>x.disabled=true)});
   const acc=right/quiz.length,actual=sess.words/(Math.max(sess.ms,1)/60000);
-  const lesson=onLesson()?P.level:null;
+  const lesson=sessKind!=='listen'&&onLesson()?P.level:null;
   const passed=!!(lesson&&acc>=0.8&&sess.words>=300);
-  const rec={date:Date.now(),doc:doc.name,set:S.wpm,wpm:Math.round(actual),words:sess.words,acc,err:Math.round(actual*acc),chunk:S.chunk,mode:S.mode,ms:Math.round(sess.ms),level:lesson,passed,qtype:quizKind};
+  const rec={date:Date.now(),doc:doc.name,set:S.wpm,wpm:Math.round(actual),words:sess.words,acc,err:Math.round(actual*acc),chunk:S.chunk,mode:S.mode,ms:Math.round(sess.ms),level:lesson,passed,qtype:quizKind,kind:sessKind};
+  sessKind='read';
   LOG.sessions.push(rec);persistLog();
   const lines=report(rec);
   if(passed&&P.level<10){P.level++;persistProfile(true)}
@@ -2827,7 +3163,7 @@ function scoreQuiz(){
   $('#score').disabled=true;
   const next=nextStep(rec);
   $('#resultBox').innerHTML=`<div class="stats" style="margin-top:20px">
-    <div class="stat"><div class="k">Actual speed</div><div class="v">${fmt(actual)}</div><div class="s">wpm (set ${rec.set})</div></div>
+    <div class="stat"><div class="k">${rec.kind==='listen'?'Listening speed':'Actual speed'}</div><div class="v">${fmt(actual)}</div><div class="s">${rec.kind==='listen'?'wpm':'wpm (set '+rec.set+')'}</div></div>
     <div class="stat"><div class="k">Comprehension</div><div class="v">${right}/${quiz.length}</div><div class="s">${Math.round(acc*100)}%</div></div>
     <div class="stat hero"><div class="k">Effective rate</div><div class="v">${fmt(rec.err)}</div><div class="s">wpm ${P.baseline?delta(rec.err,P.baseline.err)+' vs baseline':''}</div></div>
     <div class="stat"><div class="k">Reading time</div><div class="v">${fmtDur(rec.ms)}</div><div class="s">min:sec, pauses excluded · ${fmt(rec.words)} words</div></div></div>
@@ -2839,6 +3175,14 @@ function scoreQuiz(){
 }
 function report(rec){
   const L=[],p=Math.round(rec.acc*100);
+  if(rec.kind==='listen'){
+    L.push([rec.acc>=0.8?'g':rec.acc>=0.6?'w':'b',`Comprehension ${p}% after listening and reading along.${rec.acc<0.6?' Slow the voice down, or use shorter sessions on dense papers.':''}`]);
+    if(lastSS&&lastSS.wrote)L.push(['g','Your recall is saved in My notes. Compare it with the text now: what did you miss?']);
+    else L.push(['w','You skipped the written recall. Recalling from memory is the step that does most for retention.']);
+    if(lastSS&&lastSS.rev)L.push(['','Review reminders are in your calendar for tomorrow, in 3 days and in a week. Export them to your phone from Calendar.']);
+    if(rec.qtype==='gap')L.push(['','Gap-fill only tests wording; your written recall is the better test of understanding.']);
+    lastSS=null;return L;
+  }
   if(rec.acc>=0.8)L.push(['g',`Comprehension ${p}%. You kept the meaning at this pace.`]);
   else if(rec.acc>=0.6)L.push(['w',`Comprehension ${p}%. Some detail slipped. Hold this speed until you reach 80%.`]);
   else L.push(['b',`Comprehension ${p}%. Too fast for this material. Drop 25 to 50 wpm or use smaller chunks.`]);
@@ -2889,9 +3233,12 @@ function renderProgress(){
     const li=L.length-1;g+=`<circle cx="${X(li)}" cy="${Y(L[li].err)}" r="4.5" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>`;
     $('#chart').innerHTML=`<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Effective rate and actual speed over your last ${L.length} sessions">${g}</svg>`;
   }
+  const D=(LOG.drills||[]).slice().reverse();
+  $('#drillTbl').innerHTML=D.length?`<h3>Ladder drills</h3><table><thead><tr><th>Date</th><th>Reading</th><th class="n">Round 1</th><th>Rounds (words, % of round 1)</th><th class="n">New text</th></tr></thead><tbody>${D.map(x=>`<tr><td>${dShort(x.date)}</td><td style="max-width:20ch;overflow:hidden;text-overflow:ellipsis">${esc(x.doc)}</td><td class="n">${fmt(x.N)} words at ${x.base}</td><td>${x.rounds.slice(1).map(r=>`${r.min}m: ${fmt(r.words)} (${Math.round(r.words/x.N*100)}%)`).join(' · ')}</td><td class="n">${x.transfer?`${fmt(x.transfer.words)} at ${x.transfer.set}`:'—'}</td></tr>`).join('')}</tbody></table>`:'';
   $('#testsTbl').innerHTML=LOG.tests.length?`<h3>Placement tests</h3><table><thead><tr><th>Date</th><th>Passage</th><th class="n">Time</th><th class="n">Speed</th><th class="n">Score</th><th class="n">Effective</th></tr></thead><tbody>${LOG.tests.slice().reverse().map(x=>`<tr><td>${dShort(x.date)}</td><td>${esc(x.passage)}</td><td class="n">${fmtDur(x.ms)}</td><td class="n">${fmt(x.wpm)}</td><td class="n">${pill(x.acc)}</td><td class="n">${fmt(x.err)}</td></tr>`).join('')}</tbody></table>`:'<p class="empty" style="padding:14px">No tests yet.</p>';
   $('#clearRow').hidden=!LOG.sessions.length;
-  $('#table').innerHTML=C.length?`<h3>Training sessions</h3><table><thead><tr><th>Date</th><th>Reading</th><th class="n">Level</th><th class="n">Time</th><th class="n">Set</th><th class="n">Actual</th><th class="n">Chunk</th><th class="n">Score</th><th class="n">Effective</th></tr></thead><tbody>${C.slice().reverse().map(x=>`<tr><td>${dShort(x.date)}</td><td style="max-width:22ch;overflow:hidden;text-overflow:ellipsis">${esc(x.doc)}</td><td class="n">${x.level?x.level+(x.passed?' ✓':''):'–'}</td><td class="n">${fmtDur(x.ms)}</td><td class="n">${x.set}</td><td class="n">${fmt(x.wpm)}</td><td class="n">${x.chunk}</td><td class="n">${pill(x.acc)}</td><td class="n">${fmt(x.err)}</td></tr>`).join('')}</tbody></table>`:'<p class="empty" style="padding:14px">No training sessions yet.</p>';
+  const CA=LOG.sessions.filter(x=>x.acc!=null);
+  $('#table').innerHTML=CA.length?`<h3>Training sessions</h3><table><thead><tr><th>Date</th><th>Reading</th><th class="n">Level</th><th class="n">Time</th><th class="n">Set</th><th class="n">Actual</th><th class="n">Chunk</th><th class="n">Score</th><th class="n">Effective</th></tr></thead><tbody>${CA.slice().reverse().map(x=>`<tr><td>${dShort(x.date)}</td><td style="max-width:22ch;overflow:hidden;text-overflow:ellipsis">${esc(x.doc)}</td><td class="n">${x.kind==='listen'?'Listen':x.level?x.level+(x.passed?' ✓':''):'–'}</td><td class="n">${fmtDur(x.ms)}</td><td class="n">${x.kind==='listen'?'–':x.set}</td><td class="n">${fmt(x.wpm)}</td><td class="n">${x.kind==='listen'?'–':x.chunk}</td><td class="n">${pill(x.acc)}</td><td class="n">${fmt(x.err)}</td></tr>`).join('')}</tbody></table>`:'<p class="empty" style="padding:14px">No training sessions yet.</p>';
 }
 $('#clearBtn').onclick=e=>{
   const b=e.currentTarget;
@@ -3041,7 +3388,7 @@ function toast(t){const el=$('#toast');el.textContent=t;el.hidden=false;clearTim
 document.addEventListener('visibilitychange',()=>{if(document.hidden)pause()});
 
 migrateTexts();
-syncUI();updPlay();$('#v-read').dataset.rm=S.rm;setPen(0);
+syncUI();syncListenUI();setTimeout(fillVoices,800);updPlay();$('#v-read').dataset.rm=S.rm;setPen(0);
 openDoc(allDocs().some(d=>d.id===P.last)?P.last:'sample',true).then(()=>renderHome());
 renderHome();
 setSync('local');
