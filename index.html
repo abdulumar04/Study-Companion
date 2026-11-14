@@ -3706,6 +3706,9 @@ async function siftDuplicates(manual){
       if(!d.hash){let bytes=null;if(d.kind==='scan'||d.pdfPages){const r=await IDB.get(d.id);if(r&&r.pdf)bytes=r.pdf}if(!bytes){const r=await IDB.get('orig:'+d.id);if(r&&r.data)bytes=r.data}if(bytes){const h=await sha(bytes);if(h){d.hash=h;changed=true}}}
       if(!d.thash&&d.kind!=='scan'){const t=await getText(d);if(t){const h=await sha(t);if(h){d.thash=h;changed=true}}}
     }
+    // one folder per name (folders made separately on two devices or browsers)
+    {const byName={},remap={};for(const f of P.folders.slice().sort((x,y)=>String(x.id).localeCompare(String(y.id)))){const k=String(f.name||'').trim().toLowerCase();if(byName[k])remap[f.id]=byName[k].id;else byName[k]=f}
+     if(Object.keys(remap).length){P.folders=P.folders.filter(f=>!remap[f.id]);for(const d of P.docs)if(d.folder&&remap[d.folder])d.folder=remap[d.folder];if(P.curFolder&&remap[P.curFolder])P.curFolder=remap[P.curFolder];changed=true}}
     const parent={},find=x=>parent[x]===x?x:(parent[x]=find(parent[x]));
     P.docs.forEach(d=>parent[d.id]=d.id);
     for(const key of ['hash','thash']){const first={};for(const d of P.docs){const k=d[key];if(!k)continue;if(first[k])parent[find(d.id)]=find(first[k]);else first[k]=d.id}}
@@ -3714,7 +3717,7 @@ async function siftDuplicates(manual){
     for(const g of Object.values(groups)){
       if(g.length<2)continue;
       const scored=g.map(d=>({d,w:workOn(d)}));
-      scored.sort((a,b)=>(b.w.score-a.w.score)||((/^Recovered /.test(a.d.name)?1:0)-(/^Recovered /.test(b.d.name)?1:0))||((a.d.added||0)-(b.d.added||0)));
+      scored.sort((a,b)=>(b.w.score-a.w.score)||((/^Recovered /.test(a.d.name)?1:0)-(/^Recovered /.test(b.d.name)?1:0))||((a.d.added||0)-(b.d.added||0))||String(a.d.id).localeCompare(String(b.d.id)));
       const keep=scored[0].d;
       for(const {d,w} of scored.slice(1)){
         if(w.any){kept++;continue}
@@ -3874,6 +3877,9 @@ function mergeProfile(r){
   const ids=new Set(),docs=[];
   for(const d of [...(newer.docs||[]),...(older.docs||[])]){if(ids.has(d.id)||del[d.id])continue;ids.add(d.id);const o=(older.docs||[]).find(x=>x.id===d.id);const m=Object.assign({},d);if(o){m.pos=Math.max(d.pos||0,o.pos||0);m.lastOpened=Math.max(d.lastOpened||0,o.lastOpened||0)||undefined}const l=P.docs.find(x=>x.id===d.id);if(l&&l.idbText)m.idbText=true;docs.push(m)}
   const fids=new Set(),folders=[];for(const f of [...(newer.folders||[]),...(older.folders||[])]){if(!fids.has(f.id)){fids.add(f.id);folders.push(f)}}
+  // one folder per name: a folder made on two devices before they synced becomes one
+  const byName={},remap={};for(const f of folders.slice().sort((x,y)=>String(x.id).localeCompare(String(y.id)))){const k=String(f.name||'').trim().toLowerCase();if(byName[k])remap[f.id]=byName[k].id;else byName[k]=f}
+  if(Object.keys(remap).length){for(let i=folders.length-1;i>=0;i--)if(remap[folders[i].id])folders.splice(i,1);for(const d of docs)if(d.folder&&remap[d.folder])d.folder=remap[d.folder];if(newer.curFolder&&remap[newer.curFolder])newer.curFolder=remap[newer.curFolder]}
   const before=new Set(P.docs.map(d=>d.id));
   P=Object.assign({},clone(newer),{docs,folders,deleted:del});
   Object.assign(S,DEF_S,P.settings||{});P.settings=S;P.importOpts=Object.assign({},DEF_IO,P.importOpts||{});
@@ -3919,7 +3925,9 @@ async function gdSync(manual){
     const remote=await gdList();
     /* library, progress and calendar */
     const rp=remote['profile.json'];
-    if(rp&&rp.u!==(gs.pu||0)){const gone=mergeProfile(JSON.parse(await gdGet(rp.id)));for(const id of gone){await removeDoc(id);touchedOpen=true}}
+    if(rp&&rp.u!==(gs.pu||0)){const gone=mergeProfile(JSON.parse(await gdGet(rp.id)));for(const id of gone){await removeDoc(id);touchedOpen=true}
+      // the same file added on two devices before they synced: keep one copy
+      const nb=P.docs.length;await siftDuplicates(false);if(P.docs.length!==nb)touchedOpen=true}
     P.updated=Date.now();store.set('rl2.profile',P);
     gs.pu=P.updated;remote['profile.json']={id:await gdPut('profile.json',JSON.stringify(P),P.updated,rp&&rp.id,'application/json'),u:P.updated};
     const rl=remote['log.json'],cnt=x=>(x.sessions||[]).length+(x.tests||[]).length+(x.drills||[]).length;let needLog=!rl;
