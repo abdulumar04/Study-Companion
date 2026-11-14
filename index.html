@@ -287,6 +287,8 @@ svg.ink{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;ove
 .kpover{margin:0 0 10px;font-size:14px;line-height:1.55}
 .kplist{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;max-height:420px;overflow:auto;font-size:13.5px;line-height:1.5}
 .kplist .linkish{font-size:12px}
+.kpdl{margin:0 0 12px;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.kpdl .hint{margin:0 0 8px}
 .kpterms{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 0}
 .kpterms span{font-size:12px;padding:2px 8px;border-radius:99px;background:color-mix(in srgb,var(--accent) 12%,transparent)}
 .study span.kpflash{background:color-mix(in srgb,var(--accent) 30%,transparent)!important;transition:background .4s}
@@ -2437,7 +2439,7 @@ $('#study').addEventListener('click',e=>{if(!LS.on||pen!==0)return;const sp=e.ta
 // Uses the browser's own on-device AI when the device has it (Chrome/Edge Summarizer API);
 // otherwise picks the most central sentences from the text itself. Nothing leaves the device.
 const KP_STOP=new Set('a about above after again against all also am an and any are as at be because been before being below between both but by can could did do does doing down during each few for from further had has have having he her here hers him his how i if in into is it its itself just me more most my no nor not now of off on once only or other our ours out over own same she should so some such than that the their theirs them then there these they this those through to too under until up upon very was we were what when where which while who whom why will with would you your yours however therefore thus also may might must shall one two three first second et al eg ie per via within without among across although though since whether either neither rather often well many much'.split(' '));
-let KP=null,kpBusy=false;
+let KP=null,kpBusy=false,kpAiState=null,kpDl=null;
 function kpSentences(){
   const f=S.lvSkip!==false?furniture():new Set(),out=[];let i=0;
   while(i<W.length){
@@ -2481,7 +2483,7 @@ function kpExtract(){
   return {method:'extract',points:pick.map(k=>({t:usable[k].text,s:usable[k].s,e:usable[k].e})),terms,at:Date.now(),words:W.length};
 }
 async function kpAiAvailable(){
-  try{if(!('Summarizer' in self))return 'no';return await Summarizer.availability()}catch(e){return 'no'}
+  try{if(!('Summarizer' in self))return 'no';return await Summarizer.availability({type:'key-points',format:'markdown',outputLanguage:'en',expectedInputLanguages:['en']})}catch(e){return 'no'}
 }
 function kpMatch(t){
   // place an AI point next to the sentence in the text that it is closest to
@@ -2516,9 +2518,10 @@ function renderKP(){
   $('#kpListen').hidden=$('#kpCopy').hidden=$('#kpNote').hidden=!has;$('#kpGo').textContent=has?'Redo':'✦ Find key points';
   if(!doc||doc.kind==='scan'){b.innerHTML=`<p class="hint">${doc?'Key points need text. Turn the scan into text first (see Guide → Scanned documents).':'Open a reading first.'}</p>`;$('#kpGo').disabled=true;return}
   $('#kpGo').disabled=kpBusy;
-  if(!has){b.innerHTML='<p class="hint">Get the main points of this reading before you start, then listen to them or jump to each one in the text.</p>';return}
+  const dl=(kpAiState==='downloadable'||kpAiState==='downloading')?`<div class="kpdl"><p class="hint">${kpDl?esc(kpDl):'This browser can write proper summaries on this device after a one-time download of its AI model (a few GB, over Wi-Fi). After that it works offline and nothing leaves your device.'}</p>${kpDl?'':'<button class="btn small" id="kpDlBtn">Download on-device AI</button>'}</div>`:'';
+  if(!has){b.innerHTML='<p class="hint">Get the main points of this reading before you start, then listen to them or jump to each one in the text.</p>'+dl;return}
   const src=KP.method==='ai'?'Summary by the on-device AI in your browser':'Key sentences taken from the text (no AI on this device)';
-  b.innerHTML=`<p class="kpsrc">${esc(src)}</p>${KP.overview?`<p class="kpover">${esc(KP.overview)}</p>`:''}<ol class="kplist">${KP.points.map((p,k)=>`<li><span>${esc(p.t)}</span>${p.s!=null?` <button class="linkish" data-k="${k}">Show in text</button>`:''}</li>`).join('')}</ol>${KP.terms&&KP.terms.length?`<p class="kpterms">${KP.terms.map(t=>`<span>${esc(t)}</span>`).join('')}</p>`:''}`;
+  b.innerHTML=(KP.method==='extract'?dl:'')+`<p class="kpsrc">${esc(src)}</p>${KP.overview?`<p class="kpover">${esc(KP.overview)}</p>`:''}<ol class="kplist">${KP.points.map((p,k)=>`<li><span>${esc(p.t)}</span>${p.s!=null?` <button class="linkish" data-k="${k}">Show in text</button>`:''}</li>`).join('')}</ol>${KP.terms&&KP.terms.length?`<p class="kpterms">${KP.terms.map(t=>`<span>${esc(t)}</span>`).join('')}</p>`:''}`;
 }
 function kpGo(i){
   if(S.rm!=='study')setRm('study');
@@ -2532,7 +2535,7 @@ async function kpRun(){
   let res=null;const ext=kpExtract();const sents=kpSentences();
   try{
     const av=await kpAiAvailable();
-    if(av!=='no'&&av!=='unavailable'){KP={_sents:sents};res=await kpAi(ext,st)}
+    kpAiState=av;if(av==='available'){KP={_sents:sents};res=await kpAi(ext,st)}
   }catch(e){res=null}
   if(!res)res=ext;
   kpBusy=false;
@@ -2541,11 +2544,21 @@ async function kpRun(){
   renderKP();
 }
 async function loadKP(){
-  KP=null;if(!doc){renderKP();return}
+  KP=null;if(kpAiState==null){kpAiAvailable().then(a=>{kpAiState=a;renderKP()})}
+  if(!doc){renderKP();return}
   try{const r=await IDB.get('kp:'+doc.id);if(r&&r.words===W.length&&doc){r.docId=doc.id;KP=r}}catch(e){}
   renderKP();
 }
 $('#kpGo').onclick=kpRun;
+$('#kpBody').addEventListener('click',async e=>{
+  if(!e.target.closest('#kpDlBtn'))return;
+  kpDl='Starting the download…';renderKP();
+  try{
+    const sm=await Summarizer.create({type:'key-points',format:'markdown',outputLanguage:'en',expectedInputLanguages:['en'],monitor(m){m.addEventListener('downloadprogress',ev=>{kpDl=`Downloading the on-device AI: ${Math.round((ev.loaded||0)*100)}%. You can keep reading; leave this tab open.`;renderKP()})}});
+    try{sm.destroy()}catch(x){}
+    kpDl=null;kpAiState='available';renderKP();toast('On-device AI ready. Press Redo or Find key points for a written summary.');
+  }catch(err){kpDl='The download did not finish. Check you are on Wi-Fi with enough free space, then try again.';renderKP();setTimeout(()=>{kpDl=null;renderKP()},6000)}
+});
 $('#kpBody').addEventListener('click',e=>{const b=e.target.closest('button[data-k]');if(!b||!KP)return;const p=KP.points[+b.dataset.k];if(p&&p.s!=null)kpGo(p.s)});
 $('#kpClaude').onclick=()=>{
   if(!doc||doc.kind==='scan'){toast('Open a text reading first');return}
