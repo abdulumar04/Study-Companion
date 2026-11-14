@@ -1142,6 +1142,8 @@ async function alignPage(page,wrap,vp,p){
     let rects=alignCache[key];
     if(!rects){
       const tc=await page.getTextContent();
+      {const rs=tc.items.filter(it=>it.str&&it.str.trim().length>=20).map(it=>it.width/(it.str.length*(Math.hypot(it.transform[2],it.transform[3])||10))).sort((a,b)=>a-b);
+       if(rs.length>=5&&rs[rs.length>>1]>0.52){alignCache[key]={};return alignCache[key]}}
       const lay=document.createElement('div');lay.className='pdfTL';lay.style.width=vp.width+'px';lay.style.height=vp.height+'px';wrap.appendChild(lay);
       const divs=[];await pdfjsLib.renderTextLayer({textContent:tc,container:lay,viewport:vp,textDivs:divs}).promise;
       const starts=[];let full='';for(const d of divs){starts.push(full.length);full+=d.textContent+' '}
@@ -2930,6 +2932,15 @@ function cleanSummary(r){
 function splitAtGutter(lines){
   const ls=lines.filter(l=>l.parts&&l.parts.length);if(ls.length<8)return;
   const minX=Math.min(...ls.map(l=>l.x0)),maxX=Math.max(...ls.map(l=>l.x1)),span=maxX-minX;if(span<100)return;
+  // Lines that start at the left margin but report a width running a little into the right column
+  // (common in scanned journals) would hide the gutter. Find where the right column starts and trim them.
+  {const h=new Map();for(const l of ls){const k=Math.round(l.x0/4)*4;h.set(k,(h.get(k)||0)+1)}
+   const lo=minX+span*0.35,hi=minX+span*0.65;let rk=null,rn=0;for(const [k,n] of h)if(k>=lo&&k<=hi&&n>rn){rk=k;rn=n}
+   if(rk!=null&&rn>=ls.length*0.15){
+     const rx=Math.min(...ls.filter(l=>Math.abs(l.x0-rk)<=8).map(l=>l.x0)),right=ls.filter(l=>l.x0>=rx-2),rmax=Math.max(...right.map(l=>l.x1));
+     const left=ls.filter(l=>l.x0<rx-span*0.15);
+     if(left.length>=ls.length*0.15)for(const l of left){if(l.x1>rx-4&&l.x1<rx+(rmax-rx)*0.3){const k=(rx-4-l.x0)/(l.x1-l.x0);for(const q of l.parts){q.x=l.x0+(q.x-l.x0)*k;q.w*=k}l.x1=rx-4}}
+   }}
   const sz=ls.map(l=>l.size).sort((a,b)=>a-b),med=sz[sz.length>>1]||10;
   const gapAt=(l,x)=>{for(let k=1;k<l.parts.length;k++){const a=l.parts[k-1],b=l.parts[k],e=a.x+a.w;if(e<=x+1&&b.x>=x-1&&b.x-e>=med*0.5)return k}return 0};
   const covers=(l,x)=>l.parts.some(q=>q.x<x&&q.x+q.w>x);
@@ -2961,7 +2972,7 @@ function orderColumns(lines){
   const cut=(arr,depth)=>{
     if(arr.length<2||depth>12)return rowSort(arr);
     // vertical gutter that runs through the whole block
-    const vg=gaps(arr.map(l=>[l.x0,l.x1]),Math.max(4,med*0.75));
+    const vg=gaps(arr.map(l=>[l.x0,l.x1]),Math.max(1.5,med*0.15));
     if(vg.length){
       const parts=[];let left=arr;
       for(const x of vg){parts.push(left.filter(l=>l.x1<=x));left=left.filter(l=>l.x0>=x)}
@@ -2998,7 +3009,9 @@ async function readPdf(file,opts){
     for(const it of tc.items){
       const s=it.str;if(typeof s!=='string')continue;
       const t=it.transform||[1,0,0,1,0,0];
-      const size=Math.hypot(t[2],t[3])||it.height||10,x=t[4],y=t[5],w=it.width||0;
+      const size=Math.hypot(t[2],t[3])||it.height||10,x=t[4],y=t[5];let w=it.width||0;
+      // scanned pages with a hidden text layer often report lines far wider than printed; trim to a realistic width
+      if(s.trim().length>=15&&w>s.length*size*0.56)w=s.length*size*0.5;
       if(!s.trim()){if(cur)cur.pend=true;if(it.hasEOL&&cur){lines.push(cur);cur=null}continue}
       if(cur&&Math.abs(y-cur.y)<0.6*Math.max(size,cur.size)&&x>=cur.x1-size*0.6&&x-cur.x1<size*2.2){
         const sp=cur.pend||(x-cur.x1)>size*0.18||/^\s/.test(s)||/\s$/.test(cur.last);
@@ -3011,6 +3024,9 @@ async function readPdf(file,opts){
       if(it.hasEOL&&cur){lines.push(cur);cur=null}
     }
     if(cur)lines.push(cur);
+    // broken hidden text (some scanned journals): a line stretched far wider than its words could be. Squeeze it back.
+    {const pw=Math.abs(v[2]-v[0])||612;for(const l of lines){if(!l.parts||!l.parts.length)continue;const ext=l.x1-l.x0,est=l.parts.reduce((t,q)=>t+q.s.length,0)*l.size*0.5;
+      if(ext>est*1.6&&est>=l.size*6&&(l.x1>pw||ext>pw*0.4)){const k=est/ext;for(const q of l.parts){q.x=l.x0+(q.x-l.x0)*k;q.w=q.w*k}l.x1=l.x0+ext*k}}}
     splitAtGutter(lines);
     for(const l of lines){let n=0,tt=0;l.parts.forEach(q=>{const c=q.s.trim().length;n+=c;tt+=q.size*c});l.size=n?tt/n:l.size;l.text=l.parts.map((q,i)=>(i&&q.sp?' ':'')+q.s).join('').replace(/\s+/g,' ').trim()}
     pagesL.push({lines,y0,H:Hh});
