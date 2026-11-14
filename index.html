@@ -434,6 +434,7 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
             <select id="lvVoice" class="txt lsel" aria-label="Voice"></select>
             <select id="lvRate" class="txt lsel2" aria-label="Reading speed"><option value="0.8">0.8×</option><option value="0.9">0.9×</option><option value="1">1×</option><option value="1.1">1.1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="1.75">1.75×</option><option value="2">2×</option></select>
             <select id="lvBreath" class="txt lsel2" aria-label="Pauses"><option value="1">Natural pauses</option><option value="1.8">Longer pauses</option><option value="0.5">Short pauses</option></select>
+            <label class="check lall"><input type="checkbox" id="lvSkip" checked><span>Skip page numbers, headers and footers</span></label>
             <label class="check lall"><input type="checkbox" id="lvAll"><span>All voices</span></label>
             <span class="lrange" id="lvRange" hidden></span>
             <span class="hint" id="lvHint"></span>
@@ -731,6 +732,7 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
         <li>In Study mode press <b>▶ Listen</b>. The reading is spoken sentence by sentence, with the current word highlighted and the page turning by itself. Press <b>❚❚ Pause</b> to stop and <b>▶ Resume</b> to carry on from the same word.</li>
         <li><b>Start anywhere:</b> double-tap (or double-click) any word and reading starts there. While it is reading, a single click on a word jumps there. You can also select words and choose <b>Listen from here</b>.</li>
         <li><b>Read only a part:</b> select the passage, then choose <b>Listen to selection only</b>. It stops at the end of your selection; the bar shows "Reading your selection only" until then.</li>
+        <li><b>Skip page numbers, headers and footers</b> (on by default): running heads, page numbers, journal footers and "Downloaded from…" lines stamped on every page are not read aloud. Untick it to hear everything.</li>
         <li><b>One or two columns:</b> each page is laid out on its own, so title blocks, side panels, abstracts and one- or two-column text are read in the order you would read them. Words broken across two lines (like "perspec- / tive") are read and highlighted as one word.</li>
         <li><b>Voice:</b> the most natural voice on your device is chosen automatically and marked ★; robotic voices are hidden (tick <b>All voices</b> to see them). <b>Speed</b> runs from 0.8× to 2×. <b>Pauses</b> sets how long it breathes at full stops and paragraph ends.</li>
         <li><b>Best voices by device:</b> Windows and Surface: open the app in <b>Microsoft Edge</b> for Microsoft's Natural voices (they need an internet connection). iPhone and iPad: download a Premium or Enhanced voice in Settings → Accessibility → Spoken Content → Voices. Android: Chrome's Google voices; more can be added in Settings → Text-to-speech.</li>
@@ -975,7 +977,7 @@ const LEVELS=[
 ];
 
 /* ================= state ================= */
-const DEF_S={voice:'',lvRate:1,lvBreath:1,pdfScroll:true,inkW:3,wpm:250,chunk:2,mode:'page',rsvpSize:44,pageSize:19,pause:1,ramp:true,orp:true,sprint:false,rm:'study',studySize:18,studyPdf:true};
+const DEF_S={voice:'',lvRate:1,lvBreath:1,lvSkip:true,pdfScroll:true,inkW:3,wpm:250,chunk:2,mode:'page',rsvpSize:44,pageSize:19,pause:1,ramp:true,orp:true,sprint:false,rm:'study',studySize:18,studyPdf:true};
 let P=store.get('rl2.profile',null)||{v:2,updated:0,folders:[],docs:[],last:'sample',level:1,lesson:false,samplePos:0,curFolder:'all',baseline:null};
 let LOG=store.get('rl2.log',null)||{sessions:[],tests:[]};
 if(!LOG.drills)LOG.drills=[];
@@ -2318,6 +2320,38 @@ function markSpeak(s,e,w){
   if(w!=null)for(const el of spansOf(w)){el.classList.add('speak');LS.marks.push(el)}
 }
 function speakable(w){return String(w).normalize('NFKC').replace(/[\u00AD\u200B-\u200D\u2060\uFEFF]/g,'').replace(/[\u2010\u2011]/g,'-')||' '}
+// Page furniture (running heads, page numbers, footer lines) that may still be in the text.
+let furnKey='',furnSet=new Set();
+function furniture(){
+  const key=doc?doc.id+':'+W.length+':'+(fileRec&&fileRec.geo?1:0):'';if(key===furnKey)return furnSet;
+  furnKey=key;furnSet=new Set();if(!doc||!doc.pdfPages)return furnSet;
+  const P=doc.pdfPages,g=fileRec&&fileRec.geo,cand=[];let top=-1e9,bot=1e9;
+  if(g)for(let i=0;i<W.length;i++){const y=g[5*i+2];if(y>top)top=y;if(y<bot)bot=y}
+  const band=(top-bot)*0.07,PN=/^(page|p\.?)?\(?([0-9]{1,4}|[ivxlcdm]{1,6})\)?$/i;
+  for(let p=0;p<P.length;p++){
+    const a=P[p],b=p+1<P.length?P[p+1]:W.length;if(b<=a)continue;
+    // a bare number at the very start or end of a page is a page number
+    for(const i of [a,a+1,b-1,b-2])if(i>=a&&i<b&&PN.test(String(W[i]).replace(/[|·•]/g,''))&&!/^[ivxlcdm]$/i.test(W[i])&&(i===a||i===b-1||PN.test(W[i===a+1?a:b-1])))furnSet.add(i);
+    if(!g)continue;
+    const lines=[];for(let i=a;i<b;i++){if(g[5*i]!==p)continue;const y=g[5*i+2],h=g[5*i+4]||10;const L=lines.find(l=>Math.abs(l.y-y)<h*0.5);if(L)L.ix.push(i);else lines.push({y,h,ix:[i]})}
+    if(lines.length<6)continue;
+    lines.sort((x,y)=>y.y-x.y);
+    const pitch=lines.slice(1).map((l,k)=>lines[k].y-l.y).filter(d=>d>0).sort((x,y)=>x-y);const med=pitch[pitch.length>>1]||12;
+    const flag=(L,gap)=>{if(L.ix.length<=14&&(L.y>top-band||L.y<bot+band)){const t=L.ix.map(i=>W[i]).join(' ').toLowerCase().replace(/\d+/g,'#');cand.push([p,t,L.ix])}};
+    for(let q=0;q<Math.min(3,lines.length-4);q++)flag(lines[q],0);
+    for(let q=Math.max(lines.length-3,4);q<lines.length;q++)flag(lines[q],0);
+  }
+  // text stamped on every page (e.g. "Downloaded from … on [date]. See the Terms and Conditions …")
+  if(P.length>=3){const nz=w=>String(w).toLowerCase().replace(/\d+/g,'#'),seen=new Map();
+    for(let p=0;p<P.length;p++){const a=P[p],b=p+1<P.length?P[p+1]:W.length,mine=new Set();for(let i=a;i+6<=b;i++){const k=W.slice(i,i+6).map(nz).join(' ');if(!mine.has(k)){mine.add(k);seen.set(k,(seen.get(k)||0)+1)}}}
+    const need=Math.max(3,Math.ceil(P.length*0.5));
+    for(let i=0;i+6<=W.length;i++){const k=W.slice(i,i+6).map(nz).join(' ');if((seen.get(k)||0)>=need)for(let j=i;j<i+6;j++)furnSet.add(j)}}
+  // keep a margin line out only if it repeats on other pages or carries a page number
+  const cnt={};cand.forEach(c=>{cnt[c[1]]=(cnt[c[1]]||0)+1});
+  cand.forEach(c=>{if(cnt[c[1]]>=2||/^(page )?#( of #)?$/.test(c[1].trim()))c[2].forEach(i=>furnSet.add(i))});
+  return furnSet;
+}
+function skipFurn(i){if(!S.lvSkip)return i;const f=furniture();while(i<W.length&&f.has(i))i++;return i}
 function sentenceEnd(i){let e=i;while(e<W.length-1&&E[e]<2)e++;return e+1}
 function speakFrom(i,tries){
   if(!synth){toast('This browser cannot read aloud.');return}
@@ -2325,8 +2359,10 @@ function speakFrom(i,tries){
   clearTimeout(LS.timer);clearInterval(LS.est);
   if(busy&&(tries||0)<6){LS.utt=null;LS.on=true;LS.timer=setTimeout(()=>{if(LS.on)speakFrom(i,(tries||0)+1)},140);return}
   if(!doc||!W.length||i>=W.length){const fin=doc&&W.length&&i>=W.length;listenStop();if(fin)toast('Finished reading');return}
+  i=skipFurn(i);
   let e=sentenceEnd(i);if(LS.q&&LS.q[LS.qi])e=Math.min(e,LS.q[LS.qi][1]);if(LS.stopAt!=null)e=Math.min(e,LS.stopAt);if(e<=i)e=sentenceEnd(i);
-  const words=W.slice(i,e).map(speakable),offs=[];let c=0;for(const w of words){offs.push(c);c+=w.length+1}
+  const fset=S.lvSkip?furniture():null,idx=[];for(let k=i;k<e;k++)if(!fset||!fset.has(k))idx.push(k);
+  const words=idx.map(k=>speakable(W[k])),offs=[];let c=0;for(const w of words){offs.push(c);c+=w.length+1}
   const u=new SpeechSynthesisUtterance(words.join(' '));
   const v=pickVoice();if(v){u.voice=v;u.lang=v.lang}
   u.rate=+S.lvRate||1;u.pitch=1;
@@ -2334,8 +2370,8 @@ function speakFrom(i,tries){
   let gotB=false,t0=0;
   u.onstart=()=>{if(LS.utt!==u)return;markSpeak(i,e,i);t0=performance.now();
     // Some voices send no word timings: estimate the current word from elapsed time instead.
-    clearInterval(LS.est);LS.est=setInterval(()=>{if(LS.utt!==u||gotB){clearInterval(LS.est);return}const el=performance.now()-t0;if(el<450)return;const k=Math.min(words.length-1,Math.max(0,search(offs,el/1000*14.5*(+S.lvRate||1))));if(i+k!==LS.cur){LS.cur=i+k;markSpeak(i,e,i+k)}},150)};
-  u.onboundary=ev=>{if(LS.utt!==u||(ev.name&&ev.name!=='word'))return;gotB=true;const k=Math.max(0,search(offs,ev.charIndex||0));LS.cur=i+k;markSpeak(i,e,i+k)};
+    clearInterval(LS.est);LS.est=setInterval(()=>{if(LS.utt!==u||gotB){clearInterval(LS.est);return}const el=performance.now()-t0;if(el<450)return;const k=Math.min(words.length-1,Math.max(0,search(offs,el/1000*14.5*(+S.lvRate||1))));if(idx[k]!==LS.cur){LS.cur=idx[k];markSpeak(i,e,idx[k])}},150)};
+  u.onboundary=ev=>{if(LS.utt!==u||(ev.name&&ev.name!=='word'))return;gotB=true;const k=Math.max(0,search(offs,ev.charIndex||0));LS.cur=idx[k]!=null?idx[k]:i+k;markSpeak(i,e,LS.cur)};
   u.onend=()=>{
     clearInterval(LS.est);
     if(LS.utt!==u||!LS.on)return;
@@ -2368,11 +2404,12 @@ $('#lvVoice').onchange=e=>{S.voice=e.target.value;persistProfile();if(LS.on)spea
 $('#lvRate').onchange=e=>{S.lvRate=+e.target.value;persistProfile();if(LS.on)speakFrom(LS.cur)};
 $('#lvBreath').onchange=e=>{S.lvBreath=+e.target.value;persistProfile()};
 $('#lvAll').onchange=fillVoices;
+$('#lvSkip').onchange=e=>{S.lvSkip=e.target.checked;persistProfile();if(LS.on)speakFrom(LS.cur)};
 $('#hbListenSel').onclick=()=>{const r=pendingSel||(editingHl&&editingHl.s!=null?editingHl:null);if(!r)return;const s0=r.s,e0=Math.max(r.s+1,r.e);try{getSelection().removeAllRanges()}catch(x){}hideBar();listenStart(s0,{stopAt:e0,onDone:()=>toast('Finished your selection')})};
 $('#hbListen').onclick=()=>{const w=pendingSel?pendingSel.s:editingHl&&editingHl.s!=null?editingHl.s:null;if(w==null)return;try{getSelection().removeAllRanges()}catch(x){}hideBar();listenStart(w)};
 $('#study').addEventListener('dblclick',e=>{if(pen!==0)return;const sp=e.target.closest('span[data-i]');if(!sp)return;try{getSelection().removeAllRanges()}catch(x){}hideBar();listenStart(+sp.dataset.i)});
 $('#study').addEventListener('click',e=>{if(!LS.on||pen!==0)return;const sp=e.target.closest('span[data-i]');if(!sp)return;const sel=getSelection();if(sel&&!sel.isCollapsed)return;LS.q=null;speakFrom(+sp.dataset.i)});
-function syncListenUI(){$('#lvRate').value=String(S.lvRate||1);$('#lvBreath').value=String(S.lvBreath||1);fillVoices();updListenUI()}
+function syncListenUI(){$('#lvSkip').checked=S.lvSkip!==false;$('#lvRate').value=String(S.lvRate||1);$('#lvBreath').value=String(S.lvBreath||1);fillVoices();updListenUI()}
 
 /* ================= study session ================= */
 let SS=null,sessKind='read',ssTimer=null;
@@ -2888,6 +2925,27 @@ function cleanSummary(r){
   return s;
 }
 /* reading order for two-column pages: whole left column, then right column, with full-width lines (titles, abstracts) kept in place */
+// Some PDFs (often older or scanned journals) store each printed row across both columns as one line.
+// Find the gutter between columns and cut those rows in two, so each column reads on its own.
+function splitAtGutter(lines){
+  const ls=lines.filter(l=>l.parts&&l.parts.length);if(ls.length<8)return;
+  const minX=Math.min(...ls.map(l=>l.x0)),maxX=Math.max(...ls.map(l=>l.x1)),span=maxX-minX;if(span<100)return;
+  const sz=ls.map(l=>l.size).sort((a,b)=>a-b),med=sz[sz.length>>1]||10;
+  const gapAt=(l,x)=>{for(let k=1;k<l.parts.length;k++){const a=l.parts[k-1],b=l.parts[k],e=a.x+a.w;if(e<=x+1&&b.x>=x-1&&b.x-e>=med*0.5)return k}return 0};
+  const covers=(l,x)=>l.parts.some(q=>q.x<x&&q.x+q.w>x);
+  let best=null;
+  for(let x=minX+span*0.3;x<=minX+span*0.7;x+=1){
+    let cov=0,gp=0;for(const l of ls){if(covers(l,x))cov++;else if(gapAt(l,x))gp++}
+    if(gp>=ls.length*0.25&&cov<=ls.length*0.35&&(!best||gp-cov>best.score))best={x,score:gp-cov};
+  }
+  if(!best)return;
+  for(let j=lines.length-1;j>=0;j--){
+    const l=lines[j];if(!l.parts||l.parts.length<2)continue;const k=gapAt(l,best.x);if(!k)continue;
+    const mk=ps=>({parts:ps,y:ps[0].y,x0:Math.min(...ps.map(q=>q.x)),x1:Math.max(...ps.map(q=>q.x+q.w)),size:l.size,pend:false,last:ps[ps.length-1].s});
+    const A=mk(l.parts.slice(0,k)),B=mk(l.parts.slice(k));B.parts[0]=Object.assign({},B.parts[0],{sp:true});
+    lines.splice(j,1,A,B);
+  }
+}
 function orderColumns(lines){
   // Recursive XY-cut: split the page at clear horizontal bands and vertical gutters,
   // so full-width parts, side panels and one- or two-column regions each read in order.
@@ -2953,6 +3011,7 @@ async function readPdf(file,opts){
       if(it.hasEOL&&cur){lines.push(cur);cur=null}
     }
     if(cur)lines.push(cur);
+    splitAtGutter(lines);
     for(const l of lines){let n=0,tt=0;l.parts.forEach(q=>{const c=q.s.trim().length;n+=c;tt+=q.size*c});l.size=n?tt/n:l.size;l.text=l.parts.map((q,i)=>(i&&q.sp?' ':'')+q.s).join('').replace(/\s+/g,' ').trim()}
     pagesL.push({lines,y0,H:Hh});
   }
@@ -3023,6 +3082,8 @@ async function readPdf(file,opts){
           else if(ends(prev.text)&&sameCol&&(l.x0-pl.x0)>0.8*l.size)np=true;
         }else np=ends(prev.text)&&pw<prev.medW*0.85;
       }
+      // a word broken at the end of a line ("teach-" / "ing") always continues, even across a column or page
+      {const lw0=cur&&cur.words[cur.words.length-1];if(np&&lw0&&lw.length&&/[A-Za-z]-$/.test(lw0.t)&&/^[a-z]/.test(lw[0].t)&&!isHead)np=false}
       if(np){cur={h:isHead,words:[]};paras.push(cur)}
       else{
         const lastW=cur.words[cur.words.length-1];
