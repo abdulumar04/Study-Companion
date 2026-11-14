@@ -234,6 +234,8 @@ td.n,th.n{text-align:right} td.n{font-family:var(--mono);font-variant-numeric:ta
 .pslot>.origwrap{box-shadow:none;margin:0;place-self:start}
 .pnum{font:12px var(--mono);color:var(--ink-3)}
 .tl{position:absolute;inset:0}
+.pdfTL{position:absolute;left:0;top:0;overflow:hidden;opacity:0;pointer-events:none;line-height:1}
+.pdfTL span,.pdfTL br{position:absolute;white-space:pre;transform-origin:0% 0%;color:transparent}
 .tl span{position:absolute;color:transparent;white-space:pre;line-height:1;cursor:text;overflow:hidden}
 .tl span::selection{background:rgba(10,102,86,.35)}
 .study span.h1,.page span.h1{background:var(--h1)} .study span.h2,.page span.h2{background:var(--h2)}
@@ -1090,6 +1092,57 @@ async function ensurePdf(){
   pdfDoc=await pdfjsLib.getDocument({data:new Uint8Array(fileRec.pdf.slice(0))}).promise;
   return pdfDoc;
 }
+/* ================= exact word positions on the printed page ================= */
+const alignCache={};
+async function alignPage(page,wrap,vp,p){
+  try{
+    if(!window.pdfjsLib||!pdfjsLib.renderTextLayer||!fileRec||!fileRec.geo)return null;
+    const key=doc.id+':'+p+':'+Math.round(vp.width);
+    const g=fileRec.geo,a=Math.max(0,doc.pdfPages[p]-80),b=Math.min(W.length,(p+1<doc.pdfPages.length?doc.pdfPages[p+1]:W.length)+80);
+    let rects=alignCache[key];
+    if(!rects){
+      const tc=await page.getTextContent();
+      const lay=document.createElement('div');lay.className='pdfTL';lay.style.width=vp.width+'px';lay.style.height=vp.height+'px';wrap.appendChild(lay);
+      const divs=[];await pdfjsLib.renderTextLayer({textContent:tc,container:lay,viewport:vp,textDivs:divs}).promise;
+      const starts=[];let full='';for(const d of divs){starts.push(full.length);full+=d.textContent+' '}
+      let nf='';const nidx=[];for(let c=0;c<full.length;c++){const ch=full[c].toLowerCase();if(/[a-z0-9]/.test(ch)){nf+=ch;nidx.push(c)}}
+      const W0=wrap.getBoundingClientRect(),norm=x=>x.toLowerCase().replace(/[^a-z0-9]/g,'');
+      rects={};const used=new Set();
+      const dR=divs.map(d=>{const r=d.getBoundingClientRect();return [r.left-W0.left,r.top-W0.top,r.width,r.height,(d.textContent||'').length||1]});
+      const occ={};const occOf=w=>{if(occ[w])return occ[w];const a=[];let q=nf.indexOf(w);while(q>=0){a.push(q);q=nf.indexOf(w,q+1)}return occ[w]=a};
+      for(let i=a;i<b;i++){
+        if(g[5*i]!==p)continue;
+        const w=norm(W[i]);if(!w)continue;
+        const r0=vp.convertToViewportRectangle([g[5*i+1],g[5*i+2],g[5*i+1]+g[5*i+3],g[5*i+2]+g[5*i+4]*0.7]);
+        const ex=(r0[0]+r0[2])/2,ey=(r0[1]+r0[3])/2;
+        let cands=occOf(w),len=w.length;
+        if(!cands.length&&w.length>5){len=5;cands=occOf(w.slice(0,5))}
+        let best=-1,bd=Infinity;
+        for(const q of cands){
+          if(used.has(q))continue;
+          const c0=nidx[q],k=search(starts,c0),d=dR[k];if(!d)continue;
+          const fx=d[0]+d[2]*((c0-starts[k]+len/2)/d[4]),fy=d[1]+d[3]/2;
+          const dist=(fx-ex)**2+((fy-ey)*3)**2;if(dist<bd){bd=dist;best=q}
+        }
+        if(best<0)continue;
+        const lim=Math.max(40,vp.width*0.12);if(bd>lim*lim*9)continue;
+        used.add(best);
+        const c0=nidx[best],c1=nidx[best+len-1]+1;
+        const k=search(starts,c0),d=divs[k],node=d&&d.firstChild;if(!node||node.nodeType!==3)continue;
+        const o0=c0-starts[k];if(o0>=node.length)continue;
+        const o1=Math.min(node.length,Math.max(o0+1,c1-starts[k]));
+        const rg=document.createRange();rg.setStart(node,o0);rg.setEnd(node,o1);
+        const bb=rg.getBoundingClientRect();if(!bb.width||!bb.height)continue;
+        rects[i]=[(bb.left-W0.left)/vp.width,(bb.top-W0.top)/vp.height,bb.width/vp.width,bb.height/vp.height];
+      }
+      lay.remove();alignCache[key]=rects;
+    }
+    wrap.querySelectorAll('.tl span[data-i]').forEach(sp=>{const r=rects[+sp.dataset.i];if(!r)return;const L=r[0]*vp.width,T=r[1]*vp.height,Wd=r[2]*vp.width,Ht=r[3]*vp.height;sp.style.left=L.toFixed(1)+'px';sp.style.top=T.toFixed(1)+'px';sp.style.width=Wd.toFixed(1)+'px';sp.style.height=Ht.toFixed(1)+'px';sp.style.fontSize=(Ht*0.8).toFixed(1)+'px'});
+    return rects;
+  }catch(e){return null}
+}
+function alignedRect(i,p,vp){const r=alignCache[doc.id+':'+p+':'+Math.round(vp.width)];const a=r&&r[i];return a?[a[0]*vp.width,a[1]*vp.height,a[2]*vp.width,a[3]*vp.height]:null}
+
 async function renderOrig(s,e){
   const og=$('#orig');
   if(!doc.pdfPages){origPage=-1;og.innerHTML='<div class="pad"><p class="empty">Original page view works with PDF readings. This reading is shown as clean text instead.</p></div>';return}
@@ -1111,6 +1164,7 @@ async function renderOrig(s,e){
       og.querySelector('.origwrap').style.width=origVp.width+'px';
       await page.render({canvasContext:cv.getContext('2d'),viewport:vp2}).promise;
       if(tok!==origToken)return;
+      await alignPage(page,og.querySelector('.origwrap'),origVp,p);if(tok!==origToken)return;
       drawHl(chunks[ci],chunkEnd(ci));
     }catch(err){if(tok===origToken)og.innerHTML='<div class="pad"><p class="empty">This page could not be drawn. Switch to Clean text to keep reading.</p></div>'}
     return;
@@ -1122,9 +1176,8 @@ function drawHl(s,e){
   const g=fileRec.geo;let html='',top=Infinity,bot=0;
   for(let i=s;i<e;i++){
     if(g[5*i]!==origPage)continue;
-    const x=g[5*i+1],y=g[5*i+2],w=g[5*i+3],h=g[5*i+4];
-    const r=origVp.convertToViewportRectangle([x,y-0.22*h,x+w,y+0.86*h]);
-    const L=Math.min(r[0],r[2]),T=Math.min(r[1],r[3]),Wd=Math.abs(r[2]-r[0]),Ht=Math.abs(r[3]-r[1]);
+    const ar=alignedRect(i,origPage,origVp);let L,T,Wd,Ht;
+    if(ar){[L,T,Wd,Ht]=ar}else{const x=g[5*i+1],y=g[5*i+2],w=g[5*i+3],h=g[5*i+4];const r=origVp.convertToViewportRectangle([x,y-0.22*h,x+w,y+0.86*h]);L=Math.min(r[0],r[2]);T=Math.min(r[1],r[3]);Wd=Math.abs(r[2]-r[0]);Ht=Math.abs(r[3]-r[1])}
     html+=`<i style="left:${(L-2).toFixed(1)}px;top:${(T-1).toFixed(1)}px;width:${(Wd+4).toFixed(1)}px;height:${(Ht+2).toFixed(1)}px"></i>`;
     top=Math.min(top,T);bot=Math.max(bot,T+Ht);
   }
@@ -1302,6 +1355,7 @@ async function renderStudyPdf(p){
       h+=`<span data-i="${i}"${cl?` class="${cl.trim()}"`:''} style="left:${L.toFixed(1)}px;top:${T.toFixed(1)}px;width:${(Wd+3).toFixed(1)}px;height:${Ht.toFixed(1)}px;font-size:${(Ht*0.82).toFixed(1)}px">${esc(W[i])} </span>`;
     }
     st.querySelector('.tl').innerHTML=h;
+    await alignPage(page,st.querySelector('.origwrap'),studyVp,p);if(tok!==studyTok)return;
     await mountInk(st.querySelector('.origwrap'),p,studyVp.width,studyVp.height);
   }catch(err){if(tok===studyTok){S.studyPdf=false;studyKey='';renderStudy()}}
 }
@@ -1904,7 +1958,7 @@ async function mountSlot(state,p){
     await page.render({canvasContext:wrap.querySelector('canvas').getContext('2d'),viewport:vp2}).promise;
     if(!scrollActive()||slot._tok!==myTok)return;
     if(isScan){bindMarks(wrap,p);drawMarksIn(wrap.querySelector('.marks'),p);wrap.classList.toggle('penon',pen!==0&&!inkTool(pen))}
-    else{wrap.querySelector('.tl').innerHTML=textLayerHtml(p,vp)}
+    else{wrap.querySelector('.tl').innerHTML=textLayerHtml(p,vp);await alignPage(page,wrap,vp,p);if(!scrollActive()||slot._tok!==myTok)return}
     await mountInk(wrap,p,vp.width,vp.height);
     if(state.cur>=0){const h=inkHosts[state.cur];if(h)inkHost=h}
   }catch(e){slot._m=false}
@@ -2792,6 +2846,19 @@ function cleanSummary(r){
   if(r.heads)s+=`; ${fmt(r.heads)} headings kept`;
   return s;
 }
+/* reading order for two-column pages: whole left column, then right column, with full-width lines (titles, abstracts) kept in place */
+function orderColumns(lines){
+  const live=lines.filter(l=>!l.drop&&l.text);if(live.length<8)return lines;
+  const minX=Math.min(...live.map(l=>l.x0)),maxX=Math.max(...live.map(l=>l.x1)),mid=(minX+maxX)/2,tol=(maxX-minX)*0.03;
+  const side=l=>l.x1<=mid+tol?'L':l.x0>=mid-tol?'R':'F';
+  const nL=live.filter(l=>side(l)==='L').length,nR=live.filter(l=>side(l)==='R').length;
+  if(nL<4||nR<4||(nL+nR)<live.length*0.5)return lines;
+  const sorted=lines.slice().sort((a,b)=>b.y-a.y||a.x0-b.x0);
+  const out=[];let L=[],Rr=[];
+  const flush=()=>{out.push(...L,...Rr);L=[];Rr=[]};
+  for(const l of sorted){const sd=l.drop||!l.text?(l.x1<=mid+tol?'L':l.x0>=mid-tol?'R':'F'):side(l);if(sd==='F'){flush();out.push(l)}else if(sd==='L')L.push(l);else Rr.push(l)}
+  flush();return out;
+}
 async function readPdf(file,opts){
   await needLib('pdf');
   opts=Object.assign({},DEF_IO,opts||{});
@@ -2809,7 +2876,7 @@ async function readPdf(file,opts){
       const t=it.transform||[1,0,0,1,0,0];
       const size=Math.hypot(t[2],t[3])||it.height||10,x=t[4],y=t[5],w=it.width||0;
       if(!s.trim()){if(cur)cur.pend=true;if(it.hasEOL&&cur){lines.push(cur);cur=null}continue}
-      if(cur&&Math.abs(y-cur.y)<0.6*Math.max(size,cur.size)&&x>=cur.x1-size*0.6){
+      if(cur&&Math.abs(y-cur.y)<0.6*Math.max(size,cur.size)&&x>=cur.x1-size*0.6&&x-cur.x1<size*2.2){
         const sp=cur.pend||(x-cur.x1)>size*0.18||/^\s/.test(s)||/\s$/.test(cur.last);
         cur.parts.push({s,x,y,w,size,sp});cur.x1=Math.max(cur.x1,x+w);cur.pend=false;cur.last=s;
       }else{
@@ -2851,6 +2918,7 @@ async function readPdf(file,opts){
     }
     const ws=pg.lines.filter(l=>!l.drop&&Math.abs(l.size-body)<body*0.12).map(l=>l.x1-l.x0).sort((a,b)=>a-b);
     pg.medW=ws[Math.floor(ws.length/2)]||400;
+    pg.lines=orderColumns(pg.lines);
   });
   function lineWords(l,p){
     const out=[];let lastB=false;
