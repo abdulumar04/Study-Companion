@@ -1,5 +1,5 @@
 // DBA Study Companion offline cache. Bump VERSION when files in vendor/ change.
-const VERSION='dsc-v2';
+const VERSION='dsc-v3';
 const CORE=['./','./index.html','./legal.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./fonts/literata-latin-400-normal.woff2','./fonts/literata-latin-500-normal.woff2','./fonts/literata-latin-600-normal.woff2','./fonts/instrument-sans-latin-400-normal.woff2','./fonts/instrument-sans-latin-500-normal.woff2','./fonts/instrument-sans-latin-600-normal.woff2','./fonts/jetbrains-mono-latin-400-normal.woff2','./fonts/jetbrains-mono-latin-500-normal.woff2'];
 const VENDOR=['./vendor/pdf.min.js','./vendor/pdf.worker.min.js','./vendor/mammoth.browser.min.js','./vendor/jszip.min.js','./vendor/xlsx.full.min.js'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(VERSION).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting()))});
