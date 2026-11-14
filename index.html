@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>DBA Study Companion</title>
-<meta name="description" content="Organise, read, mark up and study your DBA materials. Works offline; your data stays on your device.">
+<meta name="description" content="Organise, read, mark up and study your DBA materials. Works offline. Your work stays on your device unless you choose to sync it to your own Google Drive.">
 <meta name="theme-color" content="#0A6656">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
@@ -12,13 +12,19 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <style>
+@font-face{font-family:'Literata';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/literata-latin-400-normal.woff2) format('woff2')}
+@font-face{font-family:'Literata';font-style:normal;font-weight:500;font-display:swap;src:url(fonts/literata-latin-500-normal.woff2) format('woff2')}
+@font-face{font-family:'Literata';font-style:normal;font-weight:600;font-display:swap;src:url(fonts/literata-latin-600-normal.woff2) format('woff2')}
+@font-face{font-family:'Instrument Sans';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/instrument-sans-latin-400-normal.woff2) format('woff2')}
+@font-face{font-family:'Instrument Sans';font-style:normal;font-weight:500;font-display:swap;src:url(fonts/instrument-sans-latin-500-normal.woff2) format('woff2')}
+@font-face{font-family:'Instrument Sans';font-style:normal;font-weight:600;font-display:swap;src:url(fonts/instrument-sans-latin-600-normal.woff2) format('woff2')}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/jetbrains-mono-latin-400-normal.woff2) format('woff2')}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:500;font-display:swap;src:url(fonts/jetbrains-mono-latin-500-normal.woff2) format('woff2')}
 :root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 body{margin:0;font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
 img{max-width:100%}
 [hidden]{display:none!important}
 </style>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Literata:opsz,wght@7..72,400;7..72,500;7..72,600&display=swap">
 <style>
 /* Layout: a reading desk. A course home, one stage for the text with a control rail, a filed library, and a progress record. */
 :root{
@@ -575,7 +581,7 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
       </div>
       <div class="backup" id="gPanel" hidden>
         <h2>Sync with Google Drive</h2>
-        <p class="hint">Sign in with Google to keep materials, highlights, notes, calendar and progress the same on all your devices. It is stored in a private app folder in your own Google Drive that only this app can open. Everything still works offline and syncs when you are back online.</p>
+        <p class="hint">Sign in with Google to keep materials, highlights, notes, calendar and progress the same on all your devices. It is stored in a private app folder in your own Google Drive that only this app can open. Everything still works offline and syncs when you are back online. See <a href="legal.html#privacy">privacy notice</a>.</p>
         <p class="hint" id="gStatus"></p>
         <label class="check"><input type="checkbox" id="gOrig"><span>Also sync original files, so printed pages and ink appear on every device (uses more data)</span></label>
         <button class="btn small primary" id="gNow">Sync now</button>
@@ -646,6 +652,7 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
       <button data-g="g-data">Your data and privacy</button>
       <button data-g="g-devices">Devices</button>
       <button data-g="g-faq">Problems and fixes</button>
+      <button data-g="g-legal">Terms, privacy and licences</button>
     </nav>
   </aside>
   <article class="gbody">
@@ -658,10 +665,10 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
     <section id="g-start">
       <h3>Start here</h3>
       <ol class="steps">
-        <li><b>Open the link in Chrome, Edge or Safari</b> and keep using the same browser on that device. Your work is saved in that browser; nothing is uploaded anywhere.</li>
+        <li><b>Open the link in Chrome, Edge or Safari</b> and keep using the same browser on that device. Your work is saved in that browser. Nothing is sent to us; it only leaves your device if you turn on sync to your own Google Drive.</li>
         <li><b>Install it as an app (optional, recommended).</b> On a computer, use the install icon at the right of the address bar. On iPhone or iPad, tap Share, then <b>Add to Home Screen</b>. On Android, open the browser menu and tap <b>Install app</b> or <b>Add to Home screen</b>. It then opens like an app and works offline.</li>
         <li><b>Add your course materials.</b> Go to <b>Materials</b>, make a folder for each course, and drop in your PDFs, Word files and slide decks.</li>
-        <li><b>Put your timetable in.</b> Go to <b>Calendar</b> and press <b>Load DBA6 Semester 1 timetable</b>, or import your own Excel or CSV timetable. Then press <b>Everything</b> under "Add to your phone's calendar" to get reminders on your phone.</li>
+        <li><b>Put your timetable in.</b> Go to <b>Calendar</b> and import the Excel or CSV timetable your programme office sends. Then press <b>Everything</b> under "Add to your phone's calendar" to get reminders on your phone.</li>
         <li><b>Back up every week or two</b> from <b>Materials → Save a backup</b>, and keep the file in OneDrive, Google Drive or iCloud.</li>
       </ol>
     </section>
@@ -764,7 +771,7 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
     <section id="g-cal">
       <h3>Calendar and deadlines</h3>
       <ul>
-        <li><b>DBA6 timetable:</b> press <b>Load DBA6 Semester 1 timetable (2026/27)</b> to add all sessions with course names. If the programme office sends a new version, import that file instead.</li>
+        <li><b>Your programme timetable:</b> import the file your programme office sends. If they send a new version, import it again; the old sessions from that file are replaced.</li>
         <li><b>Import any timetable:</b> Excel or CSV. It understands a grid timetable (dates down the side, time slots across the top) or a list with Date, Time and Subject columns. You see a preview before anything is added. Importing an updated version of the same file replaces the old one and keeps your own deadlines.</li>
         <li><b>Course names:</b> type the full name next to each code. Names then show everywhere.</li>
         <li><b>Add a deadline or event:</b> title, type (class, submission deadline, exam, reminder), date, optional times, where or how to submit, and notes. Deadlines and exams show a countdown.</li>
@@ -775,7 +782,7 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
     <section id="g-data">
       <h3>Your data, privacy and backups</h3>
       <ul>
-        <li><b>Nothing is uploaded.</b> Your materials, highlights, ink, notes, calendar and results stay in this browser on this device. Nobody else can see them, including whoever shared the link.</li>
+        <li><b>Nothing is sent to us.</b> There are no accounts, no analytics and no server behind this app. Your materials, highlights, ink, notes, calendar and results stay in this browser on this device. Nobody else can see them, including whoever shared the link.</li>
         <li><b>Sync across devices (optional):</b> press <b>☁ Sign in to sync</b> at the top and sign in with Google. Your work is kept in a private app folder in your own Google Drive and stays the same on your laptop, phone and tablet. It syncs by itself about a minute after changes while you are signed in; after an hour Google asks you to tap <b>☁ Tap to sync</b> again. Without sync, each device keeps its own library; use a backup to move your work.</li>
         <li><b>Backups:</b> <b>Materials → Save a backup</b> downloads one file with everything except the original files (tick <b>Include original files</b> to keep those too; the file is then much larger). <b>Restore from backup</b> replaces what is in the app with the backup.</li>
         <li><b>What can erase your data:</b> clearing your browser's history and site data, uninstalling the browser, using a private window, and on iPhone or iPad, not opening the app for a few weeks. A recent backup protects you from all of them.</li>
@@ -805,6 +812,16 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
       <details><summary>"Attach PDF" appears instead of the page</summary><p>The original file is not stored here, for example after restoring a backup made without original files. Attach the same PDF once.</p></details>
       <details><summary>"The file reader could not load"</summary><p>The PDF, Word, slides and spreadsheet readers download the first time you use each one. Connect to the internet once and try again; after that they work offline.</p></details>
       <details><summary>The timetable import found nothing</summary><p>The file needs dates in the first column (grid layout) or a header row with Date and Subject columns. Check that the dates are real dates or written like 27/10/26.</p></details>
+    </section>
+    <section id="g-legal">
+      <h3>Terms, privacy and licences</h3>
+      <ul>
+        <li><b>Free, personal study tool, provided as it is.</b> No warranty. Keep your own copies of your files and make regular backups. Reading-speed and comprehension figures are practice estimates, not assessments.</li>
+        <li><b>Your materials:</b> only add files you are entitled to use. The app does not share or publish them.</li>
+        <li><b>Privacy:</b> no accounts, analytics or cookies. Optional sync uses a hidden app folder in your own Google Drive; we never receive your data. Some online voices (for example Edge "Natural" voices) are produced by Microsoft or Google from the text being read.</li>
+        <li><b>Independent:</b> not affiliated with, or endorsed by, any school, university, Microsoft, Google or Apple.</li>
+      </ul>
+      <p>Full terms, privacy notice and open-source licences: <a href="legal.html">legal.html</a>.</p>
     </section>
   </article>
 </div>
@@ -840,7 +857,7 @@ footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-si
   </div>
 </section>
 
-<footer>New here or stuck? Open <b>Guide</b> at the top of the page. Everything you add stays in this browser on this device; nothing is uploaded anywhere. Make a backup from <b>Materials</b> every week or two.</footer>
+<footer>New here or stuck? Open <b>Guide</b> at the top of the page. Everything you add stays in this browser on this device unless you turn on sync to your own Google Drive. Make a backup from <b>Materials</b> every week or two. <a href="legal.html">Terms, privacy and licences</a> · Not affiliated with any school or university.</footer>
 </div>
 <div id="toast" role="status" aria-live="polite" hidden></div>
 
@@ -2155,8 +2172,7 @@ function renderCalendar(){
       <div class="row-gap"><button class="btn small primary" id="icsAll">Everything</button><button class="btn small" id="icsDue">Deadlines and exams only</button></div>
     </div>
     <div class="panel"><h2>Import timetable</h2>
-      <button class="btn small primary" id="calDba6" style="margin-bottom:10px">Load DBA6 Semester 1 timetable (2026/27)</button>
-      <p class="hint" style="margin-bottom:10px">CSV or Excel. Works with a grid timetable (dates down the side, time slots across the top, like the LBS semester timetable) or a list with date, time and subject columns.</p>
+      <p class="hint" style="margin-bottom:10px">CSV or Excel. Works with a grid timetable (dates down the side, time slots across the top, the usual business-school layout) or a list with date, time and subject columns.</p>
       <label class="btn small" for="calFile" style="display:inline-block">Choose file…</label><input type="file" id="calFile" accept=".csv,.xlsx,.xls" hidden>
       <div id="calPreview"></div>
       ${CAL.events.length?`<div class="row-gap" style="margin-top:12px"><span class="hint">${CAL.events.length} items in your calendar.</span><button class="btn small danger" id="calClear">Clear imported timetable</button></div>`:''}
@@ -2177,16 +2193,6 @@ function evFormHtml(){
     </div>`;
 }
 
-const DBA6=[["2026-10-27","08:30","10:30","Onboarding, Welcome Address and Facility Tour",0],["2026-10-27","11:00","13:00","MIE 1",0],["2026-10-27","14:00","16:00","MIE 2",0],["2026-10-28","08:30","10:30","MIE 3",0],["2026-10-28","11:00","13:00","MIE 4",0],["2026-10-28","14:00","16:00","RME 1",0],["2026-10-29","08:30","10:30","BCS 1",0],["2026-10-29","11:00","13:00","Speed Reading",0],["2026-10-29","14:00","17:00","Speed Reading",0],["2026-10-30","08:30","10:30","BCS 2",0],["2026-10-30","11:00","13:00","BCS 3",0],["2026-10-30","14:00","16:00","RME 2",0],["2026-10-30","16:00","17:00","DBA 1,2,3,4,5,6 Networking Cocktail",0],["2026-10-31","08:30","10:30","MIE 5",1],["2026-10-31","11:00","13:00","MIE 6",1],["2026-10-31","14:00","16:00","RME 3",1],["2026-11-14","11:00","13:00","MIE 7",1],["2026-11-14","13:30","15:30","MIE 8",1],["2026-11-14","16:00","18:00","BCS 4",1],["2026-11-28","11:00","13:00","MIE 9",1],["2026-11-28","13:30","15:30","RME 4",1],["2026-11-28","16:00","18:00","BCS 5",1],["2026-12-12","11:00","13:00","MIE 10",1],["2026-12-12","13:30","15:30","RME 5",1],["2026-12-12","16:00","18:00","BCS 6",1],["2027-01-18","08:30","10:30","MIE 11",0],["2027-01-18","11:00","13:00","MIE 12",0],["2027-01-18","14:00","16:00","RME 6",0],["2027-01-19","08:30","10:30","BCS 7",0],["2027-01-19","11:00","13:00","BCS 8",0],["2027-01-19","14:00","16:00","RME 7",0],["2027-01-20","08:30","10:30","MIE 13",0],["2027-01-20","11:00","13:00","MIE 14",0],["2027-01-20","14:00","16:00","BCS 9",0],["2027-01-21","08:30","10:30","BCS 10",0],["2027-01-21","11:00","13:00","BCS 11",0],["2027-01-21","14:00","16:00","RME 8",0],["2027-01-22","08:30","10:30","MIE 15",0],["2027-01-22","11:00","13:00","MIE 16",0],["2027-01-22","14:00","16:00","BCS 12",0],["2027-01-23","08:30","10:30","RME 9",0],["2027-01-23","11:00","13:00","Critical Literature Review",0],["2027-01-23","14:00","16:00","Critical Literature Review",0],["2027-02-06","11:00","13:00","RME 10",1],["2027-02-06","13:30","15:30","MIE 17",1],["2027-02-06","16:00","18:00","BCS 13",1],["2027-02-20","11:00","13:00","MIE 18",1],["2027-02-20","13:30","15:30","MIE 19",1],["2027-02-20","16:00","18:00","BCS 14",1],["2027-03-06","11:00","13:00","MIE 20",1],["2027-03-06","13:30","15:30","MIE 21",1],["2027-03-06","16:00","18:00","BCS 15",1],["2027-03-15","08:30","10:30","BCS 16",0],["2027-03-15","11:00","13:00","BCS 17",0],["2027-03-15","14:00","16:00","MIE 22",0],["2027-03-16","08:30","10:30","RME 11",0],["2027-03-16","11:00","13:00","RME 12",0],["2027-03-16","14:00","16:00","BCS 18",0],["2027-03-17","08:30","10:30","BCS Industry Visit",0],["2027-03-17","11:00","13:00","BCS Industry Visit",0],["2027-03-17","14:00","16:00","BCS Industry Visit",0],["2027-03-18","08:30","10:30","BCS 23",0],["2027-03-18","11:00","13:00","RME 13",0],["2027-03-18","14:00","16:00","RME 14",0],["2027-03-19","08:30","10:30","MIE 23",0],["2027-03-19","11:00","13:00","MIE 24",0],["2027-03-19","14:00","16:00","BCS 24",0],["2027-03-20","08:30","10:30","RME 15",0],["2027-03-20","11:00","13:00","RME 16",0]];
-const DBA6_SRC='DBA6 Semester 1 2026/27';
-function loadDba6(){
-  CAL.events=CAL.events.filter(x=>x.src!==DBA6_SRC).concat(DBA6.map((r,i)=>({id:'d6_'+i,date:r[0],start:r[1],end:r[2],title:r[3],type:'class',mode:r[4]?'Online':'On campus',src:DBA6_SRC})));
-  const names={MIE:'Microeconomics',BCS:'Business Ethics, CSR and Sustainability',RME:'Research Methodology'};
-  for(const k in names)if(!CAL.courses[k])CAL.courses[k]=names[k];
-  saveCal();const t=new Date(),nx=CAL.events.filter(e=>e.date>=todayYmd()).map(e=>e.date).sort()[0];
-  const d=nx?new Date(nx+'T00:00'):t;calMonth=new Date(d.getFullYear(),d.getMonth(),1);
-  toast(`Added ${DBA6.length} sessions from the DBA6 Semester 1 timetable`);renderCalendar();
-}
 const icsEsc=s=>String(s||'').replace(/\\/g,'\\\\').replace(/;/g,'\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n');
 const icsUtc=(d,t)=>new Date(d+'T'+t+':00').toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
 const icsDay=d=>d.replace(/-/g,'');
@@ -2215,7 +2221,6 @@ function exportIcs(onlyDue){
 }
 
 function bindCalendar(){
-  $('#calDba6').onclick=loadDba6;
   $('#icsAll').onclick=()=>exportIcs(false);
   $('#icsDue').onclick=()=>exportIcs(true);
   $('#calPrev').onclick=()=>{calMonth=new Date(calMonth.getFullYear(),calMonth.getMonth()-1,1);renderCalendar()};
@@ -2633,7 +2638,7 @@ function renderHome(){
     h.innerHTML=`<div class="home"><div class="panel lead">
       <p class="eyebrow">Start here</p>
       <h2>Your study companion</h2>
-      <p>Keep every reading, slide deck and paper for your courses in one place. Read them at your own pace with highlighters, pens and notes, keep your timetable and deadlines, or train your reading speed on the same material. Everything stays on your device.</p>
+      <p>Keep every reading, slide deck and paper for your courses in one place. Read them at your own pace with highlighters, pens and notes, keep your timetable and deadlines, or train your reading speed on the same material. Your work stays on your device unless you choose to sync it to your own Google Drive.</p>
       <div class="row-gap" style="margin-bottom:22px"><button class="btn primary" id="toGuide">Read the 10-minute guide</button><button class="btn" id="toMat">Add course materials</button></div>
       <p class="eyebrow">Speed and comprehension course</p>
       <h2 style="font-size:20px">Take the placement test</h2>
@@ -2724,7 +2729,7 @@ function testResult(rec,first){
   const b=P.baseline,fast=rec.ms<25000;
   const lines=[];
   lines.push([rec.acc>=0.8?'g':rec.acc>=0.6?'w':'b',`Comprehension ${Math.round(rec.acc*100)}%. ${rec.acc>=0.8?'Solid understanding at your natural pace.':rec.acc>=0.6?'Some detail was lost. The course will start you at a comfortable pace.':'Low comprehension. Slow, careful reading comes before any speed work.'}`]);
-  lines.push(['',`Speed ${fmt(rec.wpm)} wpm: ${band(rec.wpm)}. The average adult reads non-fiction at about 238 wpm.`]);
+  lines.push(['',`Speed ${fmt(rec.wpm)} wpm: ${band(rec.wpm)}. Adults read non-fiction silently at about 238 wpm on average (Brysbaert, 2019).`]);
   if(fast)lines.push(['w','You finished in under 25 seconds, which usually means skimming. Consider retaking the test at your normal pace.']);
   if(!first)lines.push([rec.err>=b.err?'g':'w',`Effective rate ${fmt(rec.err)} wpm against your baseline of ${fmt(b.err)} (${delta(rec.err,b.err)}).`]);
   return `<div class="stats" style="margin-top:20px">
